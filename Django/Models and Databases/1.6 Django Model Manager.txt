@@ -1,0 +1,333 @@
+=======================================================================================================================================================================
+									Managers
+=======================================================================================================================================================================
+
+A Manager is the interface through which database query operations are provided to Django models. At least one Manager exists for every model
+
+
+---------------
+Manager names
+---------------
+
+1. By default, Django adds a Manager with the name objects to every Django model class.
+2. If you want to use a name other than objects for the Manager, you can rename it on a per-model basis. To rename the Manager for a given class, define a class
+   attribute of type models.Manager() on that model.
+
+Example:
+--------
+	
+	class Cityinfo(models.Model):
+
+    		name = models.CharField(max_length=50, blank=False, null=False)
+    		population = models.IntegerField()
+    		citymanager = models.Manager()
+    
+    		class Meta:
+        		ordering = ['population']
+        		verbose_name_plural = 'Cityinfo'
+        		db_table = 'city_information'
+    
+    		def __str__(self):
+        		return self.name
+
+
+Now Querying the Cityinfo model with default manager name 'objects' will raise AttributeError
+
+>>> from Bookstore.models import Cityinfo
+
+>>> Cityinfo.objects.all()
+
+AttributeError: type object 'Cityinfo' has no attribute 'objects'
+
+
+>>> Cityinfo.citymanager.all()
+
+<QuerySet [<Cityinfo: Tenali>, <Cityinfo: Warangal>]>
+
+
+
+----------------
+Custom managers
+----------------
+You can use a custom Manager in a particular model by extending the base Manager class and instantiating your custom Manager in your model.
+
+There are two reasons you might want to customize a Manager:
+
+	1. To add extra Manager methods
+	2. to modify the initial QuerySet
+
+
+Adding extra manager methods:
+------------------------------
+Adding extra Manager methods is the preferred way to add “table-level” functionality to your models.
+
+BUT, For “row-level” functionality – i.e., functions that act on a single instance of a model object – use Model methods, not custom Manager methods.
+(example: custom save() method to save single record/row/instance values of model class)
+
+----------------------
+Custom manager syntax
+----------------------
+
+from django.db import models
+
+class CustomManager(models.Manager):
+	
+	def extra_method(self):
+		from django.db import connection
+		with connection.cursor() as cur:
+			cur.execute(sql query)
+
+			write own custom logic
+		
+		return output
+
+class modelname(models.Model):
+	attribute 1
+	attribute 2
+	objects = CustomManager()
+
+
+Now we can call extra method like 'modelname.objects.extra_method()'
+
+
+Example:
+---------
+	
+	class Stateinfo(models.Model):
+    
+    	    class statemanager(models.Manager):
+        
+                def all_with_cnt(self):
+
+                    from django.db import connection
+
+                    with connection.cursor() as cur:
+
+                        cur.execute('select * from state_information')
+                        result_list = []
+
+                        for row in cur.fetchall():
+
+                            record = self.model(id=row[0], name=row[1], population=row[2])    # Assigning db column values to variables/attributes of model class
+                    
+                            result_list.append(record)
+            
+                    return result_list, len(result_list)
+    
+    
+    	    name = models.CharField(max_length=50, blank=False, null=False)
+    	    population = models.IntegerField()
+    	    modelmanager = statemanager()
+    
+    	    class Meta:
+        	ordering = ['population']
+        	verbose_name_plural = 'State info'
+        	db_table = 'state_information'
+             
+    	    def __str__(self):
+        	return self.name
+
+
+
+NOTE:
+------
+Custom Manager methods(i.e, all_with_cnt) can access self.model to get the model class(i.e, Stateinfo) attributes(i.e, id, name, population) to which they’re
+attached.
+
+
+
+---> Now, you’d use "Stateinfo.modelmanager.all_with_cnt()" to return that list of Stateinfo objects with the count number.
+
+
+>>> Stateinfo.modelmanager.all_with_cnt()
+
+([<Stateinfo: Andhra Pradesh>, <Stateinfo: Telangana>, <Stateinfo: Karnataka>, <Stateinfo: Tamilnadu>, <Stateinfo: Maharastra>], 5)
+
+
+
+NOTE:
+------
+A custom Manager method can return anything you want. It doesn’t have to return a QuerySet. (there is no rule it must return QuerySet).
+in the above example it's returned a tuple object.
+
+
+NOTE:
+------
+Even though we are written a custom manager with some custom methods on our model, we can undoubtely use all bultin methods of builtin manager class because our custom
+manager class is extending the builtin manager class 
+
+>>> Stateinfo.modelmanager.all()
+
+<QuerySet [<Stateinfo: Telangana>, <Stateinfo: Tamilnadu>, <Stateinfo: Karnataka>, <Stateinfo: Andhra Pradesh>, <Stateinfo: Maharastra>]>
+
+
+
+-------------------
+Custom save method
+-------------------
+
+class Countryinfo(models.Model):
+    name = models.CharField(max_length=50, blank=False, null=False)
+    code = models.CharField(max_length=7, blank=True, null=True)
+    population = models.IntegerField()
+    
+    class Meta:
+        ordering = ['code']
+        verbose_name_plural = 'Country info'
+        db_table = 'country_information'
+        
+    def save(self, *args, **kwargs):
+        res = input("Do you want to continue with save?")
+        
+        if res in ['Y', 'y', 'yes', 'Yes', 'YES']:
+            super().save(*args, **kwargs)
+            
+    def __str__(self):
+        return self.name  
+
+
+
+
+>>> from Bookstore.models import Countryinfo
+>>>
+>>> c = Countryinfo(name = 'United Kingdom', code='UK', population = 66600000)
+>>>
+>>> c.save()
+Do you want to continue with save?yes
+>>>
+>>> Countryinfo.objects.all()
+<QuerySet [<Countryinfo: India>, <Countryinfo: United Kingdom>, <Countryinfo: United States>]>
+
+
+
+
+
+========================================
+Modifying a manager’s initial QuerySet
+========================================
+
+A Manager’s base QuerySet returns all objects in the system. 
+
+For example
+
+from django.db import models
+
+class modelname(models.Model):
+    att1 = models.CharField(max_length=100)
+    att2 = models.CharField(max_length=50)
+
+
+…the statement "modelname.objects.all()" will return all model objects in the database.
+
+You can override a Manager’s base QuerySet by overriding the "get_queryset()" method of builtin Manager. get_queryset() should return a QuerySet with the properties
+you require.
+
+Example:
+---------
+class Movie(models.Model):
+    
+    class Christ_Nolan_Manager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(director='Christopher Nolan')
+        
+    class James_Cameron_Manager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(director='James Cameron')
+            
+    
+    title = models.CharField(max_length=70, blank=False, null=False)
+    director = models.CharField(max_length=50, blank=False, null=False)
+    releasedate = models.DateField()
+    
+    movieslist = models.Manager()
+    nolanlist = Christ_Nolan_Manager()
+    cameronlist = James_Cameron_Manager()
+    
+    class Meta:
+        ordering = ['releasedate']
+        verbose_name_plural = 'Movies info'
+        db_table = 'movies_list'
+        
+    def __str__(self):
+        return self.title
+
+
+
+Now if we use 'movieslist' manager it will gives all movies list, to get specific director films we will write filter on Queryset, but instead of that now we are 
+created a separate manager for the director which will return a Queryset with list of movies belongs to that director only by overriding the get_queryset() method.
+
+>>> Movie.movieslist.all()
+<QuerySet [<Movie: Titanic>, <Movie: Avatar>, <Movie: Inception>, <Movie: Gravity>, <Movie: Interstellar>, <Movie: The Martian>]>
+
+>>> Movie.nolanlist.all()
+<QuerySet [<Movie: Inception>, <Movie: Interstellar>]>
+
+>>> Movie.cameronlist.all()
+<QuerySet [<Movie: Titanic>, <Movie: Avatar>]>
+
+
+if we observe the above results we are using same method 'all()' for the three managers but resulted QuerySets are different. 
+this is because of modifying the initial QuerySet of manager by overriding the "get_queryset()" method.
+
+
+
+we can use all the other QuerySet methods like filter, exclude and etc on the resulted QuerySets of all managers
+
+>>> Movie.cameronlist.all().exclude(title__istartswith='a')
+<QuerySet [<Movie: Titanic>]>
+
+>>> Movie.nolanlist.all().filter(releasedate__year=2014)
+<QuerySet [<Movie: Interstellar>]>
+
+
+
+NOTE:
+------
+This example also pointed out another interesting technique: using multiple managers on the same model. You can attach as many Manager() instances to a model 
+as you’d like.
+
+
+
+***NOTE:
+---------
+If you use custom Manager objects, take note that the first Manager Django encounters (in the order in which they’re defined in the model) has a special status. 
+Django interprets the first Manager defined in a class as the “default” Manager, and several parts of Django (including dumpdata) will use that Manager exclusively 
+for that model. So, we should be careful in the choice of default manager in order to avoid a situation where overriding get_queryset() results in an inability to 
+retrieve objects you’d like to work with.
+
+
+
+==================================================
+Calling custom QuerySet methods from the manager
+==================================================
+
+pass for now
+
+
+
+
+=========================================
+Creating a manager with QuerySet methods
+=========================================
+
+pass
+
+
+
+
+=======================================
+Custom managers and model inheritance
+=======================================
+pass
+
+
+
+========================
+Implementation concerns
+========================
+
+
+
+
+
+

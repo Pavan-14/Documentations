@@ -1,0 +1,442 @@
+===========================================================================================================================================================
+Aggregation
+===========================================================================================================================================================
+Note:
+======
+Aggregation functions return None when used with an empty QuerySet. For example, the Sum aggregation function returns None instead of 0 if the QuerySet contains 
+no entries. An exception is Count, which does return 0 if the QuerySet is empty.
+
+
+>>> from Bookstore.models import Book, Author, Publisher, Store
+
+count()
+=======
+>>> Book.objects.count()
+7
+
+
+>>> Book.objects.filter(author__name = 'Vissu')
+<QuerySet [<Book: Data visualization>, <Book: Pandas Hand book>]>
+
+
+>>> Book.objects.filter(author__name = 'Vissu').count()
+2
+
+
+Avg()
+======
+>>> from django.db.models import Avg
+
+>>> Book.objects.all().aggregate(Avg('price'))
+{'price__avg': 314.42857142857144}
+
+
+Max()
+======
+>>> from django.db.models import Max
+
+>>> Book.objects.all().aggregate(Max('price'))
+{'price__max': Decimal('450.00')}
+
+>>> Book.objects.filter(author__name__istartswith='V').aggregate(Max('price'))
+{'price__max': Decimal('300.00')}
+
+
+Min()
+======
+>>> from django.db.models import Min
+
+>>> Book.objects.all().aggregate(Min('price'))
+{'price__min': Decimal('200.00')}
+
+>>> Book.objects.filter(author__name__istartswith='V').aggregate(Min('price'))
+{'price__min': Decimal('250.50')}
+
+Sum()
+======
+>>> from django.db.models import Sum
+
+>>> Book.objects.aggregate(total_rating = Sum('rating'))
+{'total_rating': 30.1}
+
+
+>>> Book.objects.aggregate(Max('price'), Min('price'), Avg('price'))
+{'price__max': Decimal('450.00'), 'price__min': Decimal('200.00'), 'price__avg': 314.42857142857144}
+
+
+=======================================================================================================================
+Difference between the highest priced book and the average price of all books.
+=======================================================================================================================
+
+>>> from django.db.models impor FloatField
+
+>>> Book.objects.aggregate(price_diff = Max('price', output_field=FloatField()) - Avg('price'))
+{'price_diff': 135.57142857142856}
+
+>>> Book.objects.aggregate(price_diff = Max('price', output_field=DecimalField()) - Min('price'))
+{'price_diff': Decimal('250.000000')}
+
+
+======
+Note:
+======
+When combining multiple field types, Django can only determine the output_field if all fields are of the same type. Otherwise, you must provide the output_field 
+yourself.
+
+
+====================================================ERROR SYNTAX========================================================
+>>> Book.objects.all().aggregate(price_diff = Max('price', output_field = FloatField()) - Avg('price'))
+TypeError: get_internal_type() missing 1 required positional argument: 'self'
+
+======
+Note:
+======
+The argument to the aggregate() clause describes the aggregate value that we want to compute - in this case, the average of the price field on the Book model.
+aggregate() is a terminal clause for a QuerySet that, when invoked, returns a dictionary of name-value pairs. The name is an identifier for the aggregate value; 
+the value is the computed aggregate. The name is automatically generated from the name of the field and the aggregate function. If you want to manually specify 
+a name for the aggregate value, you can do so by providing that name when you specify the aggregate clause.
+
+
+
+====================================================================================================================================================================
+Generating aggregates for each item in a QuerySet
+====================================================================================================================================================================
+The second way to generate summary values is to generate an independent summary for each object in a QuerySet. For example, if you are retrieving a list of books, 
+you may want to know how many authors contributed to each book. Each Book has a many-to-many relationship with the Author; we want to summarize this relationship 
+for each book in the QuerySet.
+
+Per-object summaries can be generated using the annotate() clause. When an annotate() clause is specified, each object in the QuerySet will be annotated with the
+specified values.
+
+Each argument to annotate() describes an aggregate that is to be calculated. For example, to annotate books with the number of authors.
+
+
+>>> Qset = Book.objects.annotate(Count('author'))
+
+>>> Qset
+<QuerySet [<Book: Angular hand book>, <Book: Data visualization>, <Book: Django hand book>, <Book: Java for Android>, <Book: Kotlin for Android>, <Book: Pandas Hand book>, <Book: Web scraping with python>]>
+
+>>> Qset[0]
+<Book: Angular hand book>
+
+>>> Qset[0].author__count
+2
+
+>>> Qset[1]
+<Book: Data visualization>
+
+>>> Qset[1].author__count
+1
+
+>>> Qset[2]
+<Book: Django hand book>
+
+>>> Qset[2].author__count
+2
+
+======
+NOTE:
+======
+the name for the annotation is automatically derived from the name of the aggregate function and the name of the field being aggregated.
+You can override this default name by providing an alias when you specify the annotation.
+
+in the above example aggregate function is 'count' and field is 'author' so annotation name is 'author__count'
+
+>>> Qset = Book.objects.annotate(no_author = Count('author'))
+
+>>> Qset[3]
+<Book: Java for Android>
+
+>>> Qset[3].no_author
+2
+
+>>> Qset[3].author__count
+
+Traceback (most recent call last):
+  File "<console>", line 1, in <module>
+AttributeError: 'Book' object has no attribute 'author__count'
+
+
+======
+NOTE:
+======
+The output of the annotate() clause is a QuerySet; this QuerySet can be modified using any other QuerySet operation, including filter(), order_by(), or even 
+additional calls to annotate().
+
+>>> Qset = Book.objects.annotate(no_author = Count('author'))
+
+>>> Qset
+<QuerySet [<Book: Angular hand book>, <Book: Data visualization>, <Book: Django hand book>, <Book: Java for Android>, <Book: Kotlin for Android>, <Book: Pandas Hand book>, <Book: Web scraping with python>]>
+
+>>> Qset.filter(author__name__iexact='vissu')
+<QuerySet [<Book: Data visualization>, <Book: Django hand book>, <Book: Pandas Hand book>, <Book: Web scraping with python>]>
+
+
+
+=====================================================================================================================================================================
+Combining multiple aggregations
+=====================================================================================================================================================================
+Combining multiple aggregations with annotate() will yield the wrong results because joins are used instead of subqueries.
+
+>>> Qset = Book.objects.annotate(no_authors = Count('author'), no_stores = Count('store'))
+>>> Qset
+<QuerySet [<Book: Angular hand book>, <Book: Data visualization>, <Book: Django hand book>, <Book: Java for Android>, <Book: Kotlin for Android>, <Book: Pandas Hand book>, <Book: Web scraping with python>]>
+
+>>> Qset[2]
+<Book: Django hand book>
+
+>>> Qset[2].no_authors
+6
+
+>>> Qset[2].no_stores
+6
+
+But there are only 2 authors for this book and this book is available in 3 stores, but it's giving 3*2 = 6 which is wrong
+To slove this problem we need to use 'distinct' keyword in the aggregation function.
+
+
+>>> Qset = Book.objects.annotate(no_authors = Count('author', distinct=True), no_stores = Count('store', distinct=True))
+
+>>> Qset
+<QuerySet [<Book: Angular hand book>, <Book: Data visualization>, <Book: Django hand book>, <Book: Java for Android>, <Book: Kotlin for Android>, <Book: Pandas Hand book>, <Book: Web scraping with python>]>
+
+>>> Qset[2]
+<Book: Django hand book>
+
+>>> Qset[2].no_authors
+2
+
+>>> Qset[2].no_stores
+3
+
+======================================================================================================================================================================
+Joins and aggregates
+======================================================================================================================================================================
+So far, we have dealt with aggregates over fields that belong to the model being queried. However, sometimes the value you want to aggregate will belong to a model 
+that is related to the model you are querying.
+
+***Getting the store objects with max and min prices for each store
+
+>>> Qset = Store.objects.annotate(min_price=Min('books__price'), max_price = Max('books__price'))
+
+>>> Qset
+<QuerySet [<Store: Dileep book store>, <Store: Dinesh book store>, <Store: Mani book store>, <Store: Vissu book store>]>
+
+>>> Qset[0]
+<Store: Dileep book store>
+
+>>> Qset[0].min_price
+Decimal('250.50')
+
+>>> Qset[0].max_price
+Decimal('450.00')
+
+
+***Getting the store objects with number of authors per each store
+
+>>> Qset = Store.objects.annotate(no_author = Count('books__author'))
+
+>>> Qset
+<QuerySet [<Store: Dileep book store>, <Store: Dinesh book store>, <Store: Mani book store>, <Store: Vissu book store>]>
+
+>>> Qset[0]
+<Store: Dileep book store>
+
+>>> Qset[0].no_author
+6
+
+>>> Qset[3]
+<Store: Vissu book store>
+
+>>> Qset[3].no_author
+12
+
+
+***Note:
+==========
+>>> Qset[-1].no_author
+
+AssertionError: Negative indexing is not supported.
+
+
+======================================================================================================================================================================
+Following relationships backwards
+======================================================================================================================================================================
+***Getting Book objects with no of pubisher per each book (Forward relationship)
+
+>>> Qset = Book.objects.annotate(pub_count = Count('publisher'))
+
+>>> Qset
+<QuerySet [<Book: Angular hand book>, <Book: Data visualization>, <Book: Django hand book>, <Book: Java for Android>, <Book: Kotlin for Android>, <Book: Pandas Hand book>, <Book: Web scraping with python>]>
+
+>>> Qset[0]
+<Book: Angular hand book>
+>>>
+>>> Qset[0].pub_count
+1
+
+***Getting publisher objects with no of books per each publisher (Reverse relationship)
+
+Note:    
+======
+The lowercase name of related models and double-underscores are used here too.
+
+For example, we can ask for all publishers, annotated with their respective total book stock counters
+(note how we use 'book' to specify the Publisher -> Book reverse foreign key hop).
+
+>>> Qset = Publisher.objects.annotate(no_books = Count('book'))     # book is nothing but Book models class name in small case letters to specify the reverse relation
+
+>>> Qset
+<QuerySet [<Publisher: Dileep publications>, <Publisher: Dinesh publications>, <Publisher: Mani publishers>, <Publisher: Vissu publications>]>
+
+>>> Qset[0].no_books
+2
+
+>>> Qset[3].no_books
+2
+
+>>> Qset[1].no_books
+1
+
+
+
+======================================================================================================================================================================
+Aggregations and other QuerySet clauses
+filter() and exclude()
+======================================================================================================================================================================
+***Getting book objects whos author name startswith 'd' and count of stores for each book is available
+
+>>> Qset = Book.objects.filter(author__name__istartswith = 'd').annotate(no_stores = Count('store'))
+
+>>> Qset
+<QuerySet [<Book: Angular hand book>, <Book: Java for Android>, <Book: Kotlin for Android>]>
+
+>>> Qset[0]
+<Book: Angular hand book>
+
+>>> Qset[0].no_stores
+4
+
+>>> Qset[1].no_stores
+4
+
+>>> Qset[2].no_stores
+3
+
+
+***Generate the average price of all books with a title that starts with “d” using the query.
+
+>>> Qset = Book.objects.filter(name__istartswith= 'd').annotate(avg_price = Avg('price'))
+>>>
+>>> Qset
+<QuerySet [<Book: Data visualization>, <Book: Django hand book>]>
+>>>
+>>> Qset[0].avg_price
+300.0
+>>>
+>>> Qset[1].avg_price
+450.0
+
+============================================
+Filtering on annotations
+============================================
+
+Annotataing book objects with count of authors for each book and applying filter to get books with more than 2 authors
+
+>>> Book.objects.annotate(no_author = Count('author')).filter(no_author__gt=2)
+<QuerySet [<Book: Angular hand book>]>
+
+
+=================================================================================================================================
+Order of annotate() and filter() clauses
+=================================================================================================================================
+When developing a complex query that involves both annotate() and filter() clauses, pay particular attention to the order in which the clauses are applied to the 
+QuerySet.
+
+When an annotate() clause is applied to a query, the annotation is computed over the state of the query up to the point where the annotation is requested. 
+The practical implication of this is that filter() and annotate() are not commutative operations.
+
+Given:
+
+Publisher A has two books with ratings 4 and 5.
+Publisher B has two books with ratings 1 and 4.
+Publisher C has one book with rating 1.
+
+Here’s an example with the Count aggregate:
+
+>>> a, b = Publisher.objects.annotate(num_books=Count('book', distinct=True)).filter(book__rating__gt=3.0)
+>>> a, a.num_books
+(<Publisher: A>, 2)
+>>> b, b.num_books
+(<Publisher: B>, 2)
+
+>>> a, b = Publisher.objects.filter(book__rating__gt=3.0).annotate(num_books=Count('book'))
+>>> a, a.num_books
+(<Publisher: A>, 2)
+>>> b, b.num_books
+(<Publisher: B>, 1)
+
+
+Both queries return a list of publishers that have at least one book with a rating exceeding 3.0, hence publisher C is excluded.
+
+In the first query, the annotation precedes the filter, so the filter has no effect on the annotation. distinct=True is required to avoid a query bug.
+
+The second query counts the number of books that have a rating exceeding 3.0 for each publisher. The filter precedes the annotation, so the filter constrains 
+the objects considered when calculating the annotation.
+
+Hence: 1st filter then annotate (filter ---> annotate)
+
+======================================================================================================================================================================
+order_by()
+======================================================================================================================================================================
+
+>>> Book.objects.annotate(no_authors = Count('author'))
+<QuerySet [<Book: Angular hand book>, <Book: Data visualization>, <Book: Django hand book>, <Book: Java for Android>, <Book: Kotlin for Android>, <Book: Pandas Hand book>, <Book: Web scraping with python>]>
+
+--------------------------------------------------------
+Specifying the order on the QuerySet using order_by()
+--------------------------------------------------------
+>>> Book.objects.annotate(no_authors = Count('author')).order_by('no_authors')      # Ascending order
+<QuerySet [<Book: Data visualization>, <Book: Kotlin for Android>, <Book: Pandas Hand book>, <Book: Django hand book>, <Book: Web scraping with python>, <Book: Java for Android>, <Book: Angular hand book>]>
+
+
+>>> Book.objects.annotate(no_authors = Count('author')).order_by('-no_authors')     # Descending order
+<QuerySet [<Book: Angular hand book>, <Book: Pandas Hand book>, <Book: Django hand book>, <Book: Web scraping with python>, <Book: Java for Android>, <Book: Data visualization>, <Book: Kotlin for Android>]>
+
+
+
+====================================================================================================================================================================
+values()
+====================================================================================================================================================================
+***Getting the author objects with avg rating for each author
+
+>>> Author.objects.annotate(avg_rating = Avg('book__rating'))
+
+<QuerySet [<Author: Vissu>, <Author: Mani>, <Author: Dinesh>, <Author: Dileep>]>
+
+
+
+>>> Author.objects.values('name').annotate(avg_rating = Avg('book__rating'))
+
+<QuerySet [{'name': 'Vissu', 'avg_rating': 4.220000000000001}, {'name': 'Mani', 'avg_rating': 4.1000000000000005}, {'name': 'Dinesh', 'avg_rating': 4.4}, {'name': 'Dileep', 'avg_rating': 4.433333333333334}]>
+
+
+
+>>> Author.objects.values('email').annotate(avg_rating = Avg('book__rating'))
+
+<QuerySet [{'email': 'viswanadh.adapala.org@gmail.com', 'avg_rating': 4.220000000000001}, {'email': None, 'avg_rating': 4.1000000000000005}, {'email': 'dineshreddy@gmail.com', 'avg_rating': 4.4}, {'email': 'dileepchaluvadi@gmail.com', 'avg_rating': 4.433333333333334}]>
+
+
+
+***Store object with max and min price for each store
+
+>>> Store.objects.values('name').annotate(max_value = Max('books__price'), min_value = Min('books__price'))
+
+<QuerySet [{'name': 'Dileep book store', 'max_value': Decimal('450.00'), 'min_value': Decimal('250.50')}, {'name': 'Dinesh book store', 'max_value': Decimal('450.00'), 'min_value': Decimal('250.50')}, {'name': 'Mani book store', 'max_value': Decimal('450.00'), 'min_value': Decimal('200.00')}, {'name': 'Vissu book store', 'max_value': Decimal('450.00'), 'min_value': Decimal('200.00')}]>
+
+
+----------------------------------------------------
+Order of annotate() and values() clauses
+-----------------------------------------------------
+
+1st values then annotate ( values() ---> annotate() )

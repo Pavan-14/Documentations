@@ -1,0 +1,101 @@
+=======================================================================================================================================================================
+							Generating dummy data for models using django-seed				
+=======================================================================================================================================================================
+
+Inserting dummy data into django models is called seeding.
+
+for testing purpose we want some data to be entered into models. but manually entering takes lot of time.
+
+We can enter bulk dummy data for testing by using "django-seed".
+
+
+
+Installing
+-----------
+
+pip install django-seed
+
+
+Django-seed uses the faker library to generate test data for your Django models. This has been “hard-forked” from django_faker in order to support newer versions of Python and Django
+
+Django-seed allows you to write code to generate models, and seed your database with one simple manage.py command!
+
+
+
+Configuration
+--------------
+Add it to your installed apps in settings.py
+
+INSTALLED_APPS = [
+
+    'django_seed',
+]
+
+
+
+Usage
+------
+Note: When seeding models with Foreign Keys, you need to make sure that those models are seeded first. For example, if a model in app A has a foreign key to a model 
+in app B, you must seed app B first.
+
+
+
+Using with command
+-------------------
+With django-seed, you can seed your database with test data from the command line using the manage.py seed command.
+
+Ex: Seed 15 of each model for the app Bookstore
+------------------------------------------------
+
+$ python manage.py seed Bookstore --number=15
+
+
+
+Using with code
+----------------
+django-seed provides methods to easily seed test databases for your Django models. 
+
+To seed your database with Model instances, import Seed, get a seeder instance, and use the add_entity method.
+
+
+Ex: seeding 5 Author and 10 Books objects
+------------------------------------------
+
+from django_seed import Seed
+
+seeder = Seed.seeder()
+
+from Bookstore.models import Book, Author
+seeder.add_entity(Author, 5)
+seeder.add_entity(Book, 10)
+
+inserted_pks = seeder.execute()
+
+
+The seeder uses the name and column type to populate the Model with relevant data. If django-seed misinterprets a column name, you can still specify a custom function 
+to be used for populating a particular column, by adding a third argument to the add_entity() method:
+
+
+seeder.add_entity(Book, 10, {
+    'rating':    lambda x: random.randint(0,6),
+    'name': lambda x: seeder.faker.email(),
+})
+seeder.execute()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

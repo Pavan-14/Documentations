@@ -1,0 +1,186 @@
+======================================================================================================================================================================
+								Generating dummy data for models using Faker
+======================================================================================================================================================================
+
+Installation
+-------------
+pip install Faker
+
+Note: this package was previously called fake-factory.
+
+
+Use faker.Faker() to create and initialize a faker generator, which can generate data by accessing properties named after the type of data you want.
+
+
+from faker import Faker
+fake = Faker()
+
+fake.name()
+# 'Lucy Cechtelar'
+
+fake.address()
+# '426 Jordy Lodge
+#  Cartwrightshire, SC 88120-6700'
+
+
+Each call to method fake.name() yields a different (random) result.
+
+
+Providers
+----------
+Each of the generator properties (like name, address, and lorem) are called “fake”. A faker generator has many of them, packaged in “providers”.
+
+Standard Providers
+------------------------------
+faker.providers
+faker.providers.address
+faker.providers.automotive
+faker.providers.bank
+faker.providers.barcode
+faker.providers.color
+faker.providers.company
+faker.providers.credit_card
+faker.providers.currency
+faker.providers.date_time
+faker.providers.file
+faker.providers.geo
+faker.providers.internet
+faker.providers.isbn
+faker.providers.job
+faker.providers.lorem
+faker.providers.misc
+faker.providers.person
+faker.providers.phone_number
+faker.providers.profile
+faker.providers.python
+faker.providers.ssn
+faker.providers.user_agent
+
+
+from faker import Faker
+from faker.providers import internet
+
+fake = Faker()
+fake.add_provider(internet)
+
+print(fake.ipv4_private())
+
+
+
+Localization
+-------------
+
+faker.Faker can take a locale as an argument, to return localized data. If no localized provider is found, the factory falls back to the default en_US locale.
+
+from faker import Faker
+fake = Faker('it_IT')
+
+for _ in range(10):
+    print(fake.name())
+
+# 'Elda Palumbo'
+# 'Pacifico Giordano'
+# 'Sig. Avide Guerra'
+# 'Yago Amato'
+# 'Eustachio Messina'
+# 'Dott. Violante Lombardo'
+# 'Sig. Alighieri Monti'
+# 'Costanzo Costa'
+# 'Nazzareno Barbieri'
+# 'Max Coppola'
+
+
+faker.Faker also supports multiple locales. New in v3.0.0.
+
+from faker import Faker
+fake = Faker(['it_IT', 'en_US', 'ja_JP'])
+for _ in range(10):
+    print(fake.name())
+
+# 鈴木 陽一
+# Leslie Moreno
+# Emma Williams
+# 渡辺 裕美子
+# Marcantonio Galuppi
+# Martha Davis
+# Kristen Turner
+# 中津川 春香
+# Ashley Castillo
+# 山田 桃子
+
+
+How to create a Provider
+-------------------------
+
+from faker import Faker
+fake = Faker()
+
+# first, import a similar Provider or use the default one
+from faker.providers import BaseProvider
+
+# create new provider class
+class MyProvider(BaseProvider):
+    def foo(self):
+        return 'bar'
+
+# then add new provider to faker instance
+fake.add_provider(MyProvider)
+
+# now you can use:
+fake.foo()
+# 'bar'
+
+
+
+Seeding the Generator
+----------------------
+
+When using Faker for unit testing, you will often want to generate the same data set. For convenience, the generator also provide a seed() method, which seeds the 
+shared random number generator. Calling the same methods with the same version of faker and seed produces the same results.
+
+from faker import Faker
+fake = Faker()
+Faker.seed(4321) / fake.seed_instance(4321)
+
+print(fake.name())
+# 'Margaret Boehm'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

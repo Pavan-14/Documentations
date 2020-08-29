@@ -1,0 +1,1260 @@
+=======================================================================================================================================================================
+									Django Rest Framework
+=======================================================================================================================================================================
+
+Change directory to virtual environment
+
+
+# Install Django and Django REST framework into the virtual environment
+
+pip install django
+pip install djangorestframework 
+
+
+Now Set up a new project with a single application
+
+> django-admin startproject tutorial
+> cd tutorial
+> django-admin startapp quickstart
+> cd ..
+
+
+Now open settings.py and add 'rest_framework' to installed apps
+
+INSTALLED_APPS = [
+    ...
+    'rest_framework',
+]
+
+
+Now create a folder called 'api' inside of the app directory to organize rest api code separately.
+
+add a file named '__init__.py' to the api directory.
+
+
+# Then create a file 'serializers.py' in the api directory
+
+# Then define serializer classes for your models
+
+Ex:
+----
+from rest_framework import serializers
+from Bookstore.models import Book
+
+class Bookserializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = '__all__'     # '__all__' to include all fields
+        # exclude = []         # fields to exclude
+        depth = 1              # To represent one to one, many to many models attributes
+
+
+Each Book has one to one relation with publisher and many to many with author in our models. To show these details also use 'depth' attribute in serilizer class.
+
+
+# Now create views.py file in Api directory and write the view functions to process.
+
+Ex:
+----
+views.py
+---------
+from django.http import HttpResponse, JsonResponse
+
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework import status
+from rest_framework.parsers import JSONParser
+
+from Bookstore.models import Book, Author, Publisher
+from Bookstore.Api.serializers import Bookserializer, Authorserializer, Publisherserializer
+
+
+@api_view(['GET'])
+def allbooks(request):
+    
+    queryset = Book.objects.all()
+    print(queryset)
+    
+    if request.method == 'GET':
+        seril = Bookserializer(queryset, many=True)
+        return Response(seril.data)
+
+
+
+# Next create urls.py file in Api directory and define urlpatterns
+
+Ex:
+----
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('bookstore/allbooks/', views.allbooks, name = 'all-books'),
+    path('bookstore/allauthors/', views.allauthors, name = 'all-authors'),
+    path('bookstore/allpublishers/', views.allpublishers, name = 'all-publishers'),
+]
+
+
+# Now open project level urls.py file and include api urls
+
+Ex:
+----
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('bookstore/', include('Bookstore.urls')),
+    
+    # Rest api urls
+    path('api/', include('Bookstore.Api.urls')),
+]
+
+
+Now run the server and open browser and enter url "http://127.0.0.1:8000/api/bookstore/allbooks/"  you will see the oputput.
+
+
+Ex output:
+------------
+[
+    {
+        "id": 5,
+        "name": "Angular hand book",
+        "pages": 30,
+        "price": "250.50",
+        "rating": 4.3,
+        "pubdate": "2020-05-22T15:07:45.950379Z",
+        "publisher": {
+            "id": 3,
+            "name": "Dinesh publications"
+        },
+        "author": [
+            {
+                "id": 1,
+                "name": "Vissu",
+                "email": "viswanadh.adapala.org@gmail.com",
+                "age": 25
+            },
+            {
+                "id": 3,
+                "name": "Dinesh",
+                "email": "dineshreddy@gmail.com",
+                "age": 23
+            },
+            {
+                "id": 4,
+                "name": "Dileep",
+                "email": "dileepchaluvadi@gmail.com",
+                "age": 25
+            }
+        ]
+    },
+    {
+        "id": 1,
+        "name": "Data visualization",
+        "pages": 30,
+        "price": "300.00",
+        "rating": 4.5,
+        "pubdate": "2020-05-22T15:07:45.950379Z",
+        "publisher": {
+            "id": 1,
+            "name": "Vissu publications"
+        },
+        "author": [
+            {
+                "id": 1,
+                "name": "Vissu",
+                "email": "viswanadh.adapala.org@gmail.com",
+                "age": 25
+            },
+            {
+                "id": 2,
+                "name": "Mani",
+                "email": null,
+                "age": 24
+            }
+        ]
+    },
+]
+
+
+As far we have seen GET api request, now we will impliment POST to save data to DB, UPDATE to update data in DB and DELETE to delete data from DB.
+
+
+urls.py
+--------
+path('bookstore/author/<str:authname>/update/', views.updateauthor, name='author-update'),
+path('bookstore/book/create/', views.createbook, name='book-create'),
+path('bookstore/book/<str:bookname>/delete/', views.deletebook, name='book-delete'),
+
+views.py
+---------
+@api_view(['PUT'])
+def updateauthor(request, authname):
+    
+    try:
+        auth = Author.objects.get(name=authname)
+    except Author.DoesNotExist:
+        return Response('No author exists with the name '+authname, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'PUT':
+        serializer = Authorserializer(auth, data=request.data, partial=True)   # Keeps partial = True if you dont want to pass values for all variabiles in the model, otherwise it will raise Field required error.
+        data = {}
+        if serializer.is_valid():
+            serializer.save()
+            data['success'] = 'update success...'
+            return Response(data=data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+    
+
+@api_view(['POST'])
+def createbook(request):
+    
+    auth = Author.objects.get(pk=1)
+    pub = Publisher.objects.get(pk=1)
+    
+    book = Book(author=auth, publisher=pub)
+  
+    if request.method == 'POST':
+        serializer = Bookserializer(book, data=request.data)
+        data = {}
+        if serializer.is_valid():
+            serializer.save()
+            data['success'] = 'update success...'
+            return Response(data=data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    
+@api_view(['DELETE'])
+def deletebook(request, bookname):
+    
+    try:
+        book = Book.objects.get(name=bookname)
+    except Book.DoesNotExist:
+        return Response('No book with the name '+bookname, status=status.HTTP_404_NOT_FOUND)
+        
+    if request.method == 'DELETE':
+        deleted = book.delete()
+        data = {}
+        if deleted:
+            data['success'] = 'Delete success...'
+        else:
+            data['failure'] = 'Delete failed!'
+        
+        return Response(data=data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+Now we dont have any authentication on our apis anyone can access the apis, but we dont want that only authenticated user have to access the apis.
+
+
+
+Aithentication of REST Api
+---------------------------
+
+REST framework provides a number of authentication schemes out of the box, and also allows you to implement custom schemes.
+
+List of Authentication schemes
+-------------------------------
+
+Default / Built-in
+-------------------
+1. BasicAuthentication
+
+2. TokenAuthentication
+
+3. SessionAuthentication
+
+4. RemoteUserAuthentication
+
+
+Third party packages
+---------------------
+Django OAuth Toolkit
+oauth2
+JSON Web Token Authentication
+...
+....
+etc
+
+
+Authentication is always run at the very start of the view, before the permission and throttling checks occur, and before any other code is allowed to proceed.
+
+The request.user property will typically be set to an instance of the contrib.auth package's User class.
+
+The request.auth property is used for any additional authentication information, for example, it may be used to represent an authentication token that the request was 
+signed with.
+
+
+1.1 How authentication is determined
+-------------------------------------
+The authentication schemes are always defined as a list of classes. 
+
+Ex:
+----
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+def example_view(request, format=None):
+    pass
+
+
+REST framework will attempt to authenticate with each class in the list, and will set request.user and request.auth using the return value of the first class that 
+successfully authenticates.
+
+If no class authenticates, request.user will be set to an instance of django.contrib.auth.models.AnonymousUser, and request.auth will be set to None.
+
+The value of request.user and request.auth for unauthenticated requests can be modified using the UNAUTHENTICATED_USER and UNAUTHENTICATED_TOKEN settings.
+
+
+
+Setting the authentication scheme
+-----------------------------------
+
+The default authentication schemes may be set globally, using the DEFAULT_AUTHENTICATION_CLASSES setting.
+
+settings.py
+-------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ]
+}
+
+
+You can also set the authentication scheme on a per-view or per-viewset basis.
+
+Ex:
+----
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+def example_view(request, format=None):
+    content = {
+        'user': unicode(request.user),  # `django.contrib.auth.User` instance.
+        'auth': unicode(request.auth),  # None
+    }
+    return Response(content)
+
+
+
+Unauthorized and Forbidden responses
+-------------------------------------
+When an unauthenticated request is denied permission there are two different error codes that may be appropriate.
+	
+	1. HTTP 401 Unauthorized
+
+	2. HTTP 403 Permission Denied
+
+HTTP 401 responses must always include a WWW-Authenticate header, that instructs the client how to authenticate. HTTP 403 responses do not include the 
+WWW-Authenticate header.
+
+
+Note that when a request may successfully authenticate, but still be denied permission to perform the request, in which case a 403 Permission Denied response will 
+always be used, regardless of the authentication scheme.
+
+
+BasicAuthentication
+--------------------
+This authentication scheme uses HTTP Basic Authentication, signed against a user's username and password. Basic authentication is generally only appropriate for 
+testing.
+
+If successfully authenticated, BasicAuthentication provides the following credentials.
+
+request.user will be a Django User instance.
+request.auth will be None.
+
+Unauthenticated responses that are denied permission will result in an HTTP 401 Unauthorized response with an appropriate WWW-Authenticate header.
+
+NOTE: 
+------
+If you use BasicAuthentication in production you must ensure that your API is only available over https. You should also ensure that your API clients will always 
+re-request the username and password at login, and will never store those details to persistent storage.
+
+
+Ex:
+----
+path('bookstore/allbooks/', views.allbooks, name = 'all-books'),
+
+from rest_framework.authentication import BasicAuthentication
+from rest_framework.decorators import api_view, authentication_classes
+
+@api_view(['GET'])
+@authentication_classes([BasicAuthentication])
+def allbooks(request):
+    queryset = Book.objects.all()
+    print(queryset)
+    
+    if request.method == 'GET':
+        seril = Bookserializer(queryset, many=True)
+        return Response(seril.data)
+
+
+Now requesting this url without username and password will give you 401 unautherized error
+
+server log
+[18/Jun/2020 11:07:40] "GET /api/bookstore/allbooks/ HTTP/1.1" 401 39
+
+[18/Jun/2020 11:08:42] "GET /api/bookstore/allbooks/ HTTP/1.1" 200 2644   # authorized request will give you 200 success message with requested data
+
+
+
+TokenAuthentication
+--------------------
+This authentication scheme uses a simple token-based HTTP Authentication scheme. Token authentication is appropriate for client-server setups, such as native desktop 
+and mobile clients.
+
+To use the TokenAuthentication scheme you'll need to configure the authentication classes to include TokenAuthentication, and additionally include 
+rest_framework.authtoken in your INSTALLED_APPS setting.
+
+INSTALLED_APPS = [
+    'rest_framework',
+    'rest_framework.authtoken',
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ]
+}
+
+
+NOTE: 
+------
+Make sure to run manage.py migrate after changing your settings. The rest_framework.authtoken app provides Django database migrations. this migration will create
+a table with name authtoken in the database to store generate tokens for each user. this table have one to one relation with django.contrib.auth.models User table.
+
+(Django2.0.7_Py3.6.5) C:\Users\Vissu\Desktop\Web-Dev\Django2.0.7_Py3.6.5\Dlearning>python manage.py migrate
+Operations to perform:
+  Apply all migrations: Bookstore, Practice, admin, auth, authtoken, contenttypes, sessions
+Running migrations:
+  Applying Bookstore.0012_auto_20200618_1121... OK
+  Applying authtoken.0001_initial... OK
+  Applying authtoken.0002_auto_20160226_1747... OK
+
+
+You'll also need to create tokens for your users.
+
+from rest_framework.authtoken.models import Token
+
+token = Token.objects.create(user=...)
+print(token.key)
+
+
+For clients to authenticate, the token key should be included in the Authorization HTTP header. The key should be prefixed by the string literal "Token", with 
+whitespace separating the two strings. For example:
+
+Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
+
+NOTE: 
+------
+If you want to use a different keyword in the header, such as Bearer, simply subclass TokenAuthentication and set the keyword class variable.
+
+If successfully authenticated, TokenAuthentication provides the following credentials.
+
+request.user will be a Django User instance.
+request.auth will be a rest_framework.authtoken.models.Token instance.
+
+Unauthenticated responses that are denied permission will result in an HTTP 401 Unauthorized response with an appropriate WWW-Authenticate header.
+
+
+NOTE: 
+------
+If you use TokenAuthentication in production you must ensure that your API is only available over https.
+
+
+Generating token for user upon signup
+--------------------------------------
+add this code in user signup / registration view
+
+from rest_framework.authtoken.models import Token
+from django.contrib.auth.models import User
+
+userobj = User.objects.get(username = from.cleaned_data['username']
+token = Token.objects.create(user=userobj)
+
+Ex:
+----
+def signup(request):
+    if request.user.is_authenticated:
+        return redirect('home-page')
+    else:
+        if request.method == 'POST':
+            form = forms.CustomUserRegistrationForm(request.POST)
+            if form.is_bound:
+                if form.is_valid():                    
+                    form.save()               
+                    username = form.cleaned_data['username']
+                    user = get_object_or_404(User, username=username)
+                    Token.objects.create(user=user)
+                    form = forms.CustomUserRegistrationForm()
+                    messages.success(request, 'User created successfully')
+                    return redirect('signin-path')
+        else:
+            form  = forms.CustomUserRegistrationForm()
+        
+        return render(request, 'signup.html', {'form':form})
+
+
+Generating Tokens By using signals
+-----------------------------------
+If you want every user to have an automatically generated Token, you can simply catch the User's post_save signal.
+
+paste this code in your app models.py file
+
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from rest_framework.authtoken.models import Token
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+
+
+
+If you've already created some users, you can generate tokens for all existing users like this.
+
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+
+for user in User.objects.all():
+    Token.objects.get_or_create(user=user)
+
+
+Using Token Authentication
+---------------------------
+
+When using TokenAuthentication, you may want to provide a mechanism for clients to obtain a token given the username and password. REST framework provides a built-in 
+view to provide this behavior. 
+
+To use it, add the "obtain_auth_token" view to your URLconf.
+
+in api urls.py file
+--------------------
+from django.urls import path
+
+from rest_framework.authtoken import views as rest_auth_views
+
+urlpatterns = [
+    path('bookstore/auth/token/', rest_auth_views.obtain_auth_token, name = 'obtain-token')
+]
+
+
+The obtain_auth_token view will return a JSON response when valid username and password fields are POSTed to the view using form data or JSON.
+
+
+Now make a POST request to this url with username and password in request Body will return the token generated when this user signedup.
+
+http://127.0.0.1:8000/api/bookstore/auth/token/
+
+body={
+ 'username' = 'Dinesh',
+ 'password' = 'your password'
+}
+
+
+Response:
+----------
+{
+    "token": "cc3bfc82cc9472a3bea88ec30f947a9f4fb5c50c"
+}
+
+
+Now we will use this token to get the data from api services
+
+
+
+Permissions
+------------
+
+AS of now we have seen how to authenticate user, even though we defined authentication classes on api views non-authenticated user still access the data without any
+restictions. this is beacuse we are not defined any persmissions on apiviews.
+
+Setting the permission policy
+------------------------------
+The default permission policy may be set globally, using the DEFAULT_PERMISSION_CLASSES setting.
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
+
+
+if this is not set then it will default to AllowAny
+
+'DEFAULT_PERMISSION_CLASSES': [
+   'rest_framework.permissions.AllowAny',
+]
+
+
+You can also set the authentication policy on a per-view, or per-viewset basis.
+
+per view permission set
+------------------------
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def example_view(request, format=None):
+    some logic here
+    return Response(content)
+
+
+Ex:
+----
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication, BasicAuthentication])
+@permission_classes([IsAuthenticated])
+def allauthors(request):
+    
+    queryset = Author.objects.all()
+    print(queryset)
+    
+    if request.method == 'GET':
+        seril = Authorserializer(queryset, many=True)
+        return Response(seril.data)
+
+
+
+Restricting update , add , delete actions to superuser only
+------------------------------------------------------------
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def deletebook(request, bookname):
+    if not request.user.is_superuser:
+        return Response("You don't have permission to delete.", status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        book = Book.objects.get(name=bookname)
+    except Book.DoesNotExist:
+        return Response('No book with the name '+bookname, status=status.HTTP_404_NOT_FOUND)
+        
+    if request.method == 'DELETE':
+        deleted = book.delete()
+        data = {}
+        if deleted:
+            data['success'] = 'Delete success...'
+        else:
+            data['failure'] = 'Delete failed!'
+        
+        return Response(data=data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
+
+
+
+Paggination and Class based API views
+--------------------------------------
+
+Why to use paggination, Let's take we are making a GET request to an api from an app in our mobile and displaying the results on the app. Let's assume there are 
+1000 items / results we are getting from an api as a response, loading all these into app at single time will slow the app or lead to low performance and crashes.
+
+To solve this we use paggination, by using paggination we will display some specific number of item each time.
+
+NOTE:
+------
+Pagination is only performed automatically if you're using the generic views or viewsets. If you're using a regular APIView, you'll need to call into the pagination 
+API yourself to ensure you return a paginated response. i.e, When using regular APIView, you need to use Django's own Paginator class.
+
+Ex:
+----
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework import status
+
+from rest_framework.authentication import BasicAuthentication, TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def allauthors(request):
+    print(request.user.is_superuser)
+    queryset = Author.objects.all()
+    
+    if request.method == 'GET':
+        paginator = Paginator(queryset, 3)
+        page = request.GET.get('page')
+    
+        try:
+            authorlist = paginator.page(page)
+        except PageNotAnInteger:
+            # If page is not an integer, deliver first page.
+            authorlist = paginator.page(1)
+        except EmptyPage:
+            # If page is out of range (e.g. 9999), deliver last page of results.
+            authorlist = paginator.page(paginator.num_pages)
+            
+        seril = Authorserializer(authorlist, many=True)
+        return Response(seril.data)
+
+
+Now make GET request to the api 
+
+[19/Jun/2020 22:03:31] "GET /api/bookstore/allauthors/?page=1 HTTP/1.1" 200 199
+
+Response
+---------
+[
+    {
+        "id": 1,
+        "name": "Vissu",
+        "email": "viswanadh.adapala.org@gmail.com",
+        "age": 25
+    },
+    {
+        "id": 7,
+        "name": "Suresh",
+        "email": "suresh@gmail.com",
+        "age": 25
+    },
+    {
+        "id": 10,
+        "name": "Rakesh",
+        "email": "rakesh@gmail.com",
+        "age": 25
+    }
+]
+
+
+[19/Jun/2020 22:07:12] "GET /api/bookstore/allauthors/?page=2 HTTP/1.1" 200 174
+
+Response
+---------
+[
+    {
+        "id": 11,
+        "name": "Pranav",
+        "email": "pranavkumar@gmail.com",
+        "age": 25
+    },
+    {
+        "id": 2,
+        "name": "Mani",
+        "email": null,
+        "age": 24
+    },
+    {
+        "id": 3,
+        "name": "Dinesh",
+        "email": "dinesh@email.com",
+        "age": 25
+    }
+]
+
+so every time it loads 3 item only per page
+
+
+There are 3 types of paggenation styles available.
+
+	1. PageNumberPagination
+
+	2. LimitOffsetPagination
+
+	3. CursorPagination
+
+And we can write our own paggination also called as Custom pagination styles.
+
+As of now we only see about PageNumberPagination.
+
+
+PageNumberPagination
+---------------------
+
+To enable the PageNumberPagination style globally, use the following configuration.
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100
+}
+
+
+settings.py
+------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 1,
+}
+
+
+views.py
+---------
+class allbooksapiview(ListAPIView):
+    queryset = Book.objects.all()
+    serializer_class = Bookserializer
+    authentication_classes = [TokenAuthentication, ]
+    permission_classes = [IsAuthenticated,]
+    # pagination_class = settings.DEFAULT_PAGINATION_CLASS
+    pagination_class = PageNumberPagination
+
+
+urls.py
+--------
+path('bookstore/allbooks/apiview/', views.allbooksapiview.as_view(), name = 'all-books-api-view'),
+
+Now making request to this api
+
+[19/Jun/2020 22:28:16] "GET /api/bookstore/allbooks/apiview/?page=1 HTTP/1.1" 200 493
+
+Response
+---------
+{
+    "count": 9,
+    "next": "http://127.0.0.1:8000/api/bookstore/allbooks/apiview/?page=2",
+    "previous": null,
+    "results": [
+        {
+            "id": 5,
+            "name": "Angular hand book",
+            "pages": 30,
+            "price": "300.00",
+            "rating": 4.4,
+            "pubdate": "2020-05-22T15:07:45.950379Z",
+            "publisher": {
+                "id": 3,
+                "name": "Dinesh publications"
+            },
+            "author": [
+                {
+                    "id": 1,
+                    "name": "Vissu",
+                    "email": "viswanadh.adapala.org@gmail.com",
+                    "age": 25
+                },
+                {
+                    "id": 3,
+                    "name": "Dinesh",
+                    "email": "dinesh@email.com",
+                    "age": 25
+                },
+                {
+                    "id": 4,
+                    "name": "Dileep",
+                    "email": "dileepchaluvadi@gmail.com",
+                    "age": 25
+                }
+            ]
+        }
+    ]
+}
+
+
+it loads only one book to page each time
+
+count ===> TOTAL NUMBER OF ITEMS.
+next  ===> Next page url
+previous ===> Previous page url
+results ===> data
+
+
+
+
+Filtering
+----------
+
+The default behavior of REST framework's generic list views is to return the entire queryset for a model manager. Often you will want your API to restrict the items 
+that are returned by the queryset.
+
+The simplest way to filter the queryset of any view that subclasses GenericAPIView is to override the .get_queryset() method.
+
+Overriding this method allows you to customize the queryset returned by the view in a number of different ways.
+
+Ex:
+----
+ Filtering against the current user
+
+from myapp.models import Purchase
+from myapp.serializers import PurchaseSerializer
+from rest_framework.generics import ListAPIView
+
+class PurchaseList(ListAPIView):
+    serializer_class = PurchaseSerializer
+
+    def get_queryset(self):
+        """
+        This view should return a list of all the purchases
+        for the currently authenticated user.
+        """
+        user = self.request.user
+        return Purchase.objects.filter(purchaser=user)
+
+
+Filtering against query parameters
+-----------------------------------
+We can override .get_queryset() to deal with URLs such as http://example.com/api/purchases?username=denvercoder9, and filter the queryset only if the username 
+parameter is included in the URL.
+
+NOTE:
+------
+request.query_params.get() is used to get the query params of the api url.
+
+class PurchaseList(ListAPIView):
+    serializer_class = PurchaseSerializer
+
+    def get_queryset(self):
+        """
+        Optionally restricts the returned purchases to a given user,
+        by filtering against a `username` query parameter in the URL.
+        """
+        queryset = Purchase.objects.all()
+        username = self.request.query_params.get('username', None)
+        if username is not None:
+            queryset = queryset.filter(purchaser__username=username)
+        return queryset
+
+
+
+Generic Filtering
+------------------
+As well as being able to override the default queryset, REST framework also includes support for generic filtering backends that allow you to easily construct complex 
+searches and filters.
+
+Generic filters can also present themselves as HTML controls in the browsable API and admin API.
+
+
+Setting filter backends
+------------------------
+The default filter backends may be set globally, using the DEFAULT_FILTER_BACKENDS setting.
+
+Ex:
+----
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+}
+
+
+You can also set the filter backends on a per-view, or per-viewset basis, using the GenericAPIView class-based views.
+
+Ex:
+----
+class UserListView(ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+
+
+*** Filtering and object lookups means For instance, a product with an id of 4675, the following URL (http://example.com/api/products/4675/?category=clothing) would 
+either return the corresponding object, or return a 404 response, depending on if the filtering conditions were met by the given product instance.
+
+
+
+Overriding the initial queryset
+--------------------------------
+
+Note that you can use both an overridden .get_queryset() and generic filtering together.
+
+For example, if Product had a many-to-many relationship with User, named purchase, you might want to write a view like this.
+
+class PurchasedProductsList(ListAPIView):
+    """
+    Return a list of all the products that the authenticated
+    user has ever purchased, with optional filtering.
+    """
+    model = Product
+    serializer_class = ProductSerializer
+    filterset_class = ProductFilter            # filter backend class for filtering products like price, color etc
+
+    def get_queryset(self):
+        user = self.request.user
+        return user.purchase_set.all()         # From filtered products getting the current user related products.
+
+
+
+
+There are 3 types of Filter backend classes availabile
+
+	1. DjangoFilterBackend
+
+	2. SearchFilter
+
+	3. OrderingFilter
+
+
+DjangoFilterBackendin example
+------------------------------
+
+To use django-filter Requirements
+----------------------------------
+Python: 3.5, 3.6, 3.7, 3.8
+Django: 2.2, 3.0
+DRF: 3.10+
+
+
+To use DjangoFilterBackend, first install django-filter. 
+
+Then add django_filters to Django's INSTALLED_APPS
+
+Then add the filter backend to your settings
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+}
+
+
+Add the filter backend to an individual View or ViewSet.
+
+from django_filters.rest_framework import DjangoFilterBackend
+
+class UserListView(generics.ListAPIView):
+    ...
+    filter_backends = [DjangoFilterBackend]
+
+
+Then set a filterset_fields attribute on the view, or viewset, listing the set of fields you wish to filter against.
+
+class ProductList(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['category', 'in_stock']
+
+This will automatically create a FilterSet class for the given fields, and will allow you to make requests such as:
+
+http://example.com/api/products?category=clothing&in_stock=True
+
+
+
+For more advanced filtering requirements you can specify a FilterSet class that should be used by the view.
+
+Let say you want to get products less than some price like below url.
+
+http://example.com/api/products?category=clothing&in_stock=True&max_price=5000
+
+Then we need to define a filterset_class
+
+Ex:
+----
+class ProductFilter(filters.FilterSet):
+    min_price = filters.NumberFilter(field_name="price", lookup_expr='gte')
+    max_price = filters.NumberFilter(field_name="price", lookup_expr='lte')
+
+    class Meta:
+        model = Product
+        fields = ['category', 'in_stock', 'min_price', 'max_price']
+
+
+Now add this to our GenericAPIView
+
+class ProductList(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = ProductFilter
+
+
+
+SearchFilter and OrderingFilter Example
+----------------------------------------
+
+The SearchFilter class supports simple single query parameter based searching.
+
+The SearchFilter class will only be applied if the view has a search_fields attribute set.
+
+The search_fields attribute should be a list of names of text type fields on the model, such as CharField or TextField.
+
+Views.py
+---------
+from Bookstore.models import Book, Author, Publisher
+from Bookstore.Api.serializers import Bookserializer, Authorserializer, Publisherserializer
+
+from rest_framework.authentication import BasicAuthentication, TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter, OrderingFilter
+
+class allbooksapiview(ListAPIView):
+    queryset = Book.objects.all()
+    serializer_class = Bookserializer
+    authentication_classes = [TokenAuthentication, ]
+    permission_classes = [IsAuthenticated,]
+    # pagination_class = settings.DEFAULT_PAGINATION_CLASS
+    pagination_class = PageNumberPagination
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'price', 'rating', 'author__name', 'publisher__name']
+
+
+urls.py
+--------
+
+path('bookstore/allbooks/apiview/', views.allbooksapiview.as_view(), name = 'all-books-api-view'),
+
+
+
+[20/Jun/2020 13:40:21] "GET /api/bookstore/allbooks/apiview/?search=4.5 HTTP/1.1" 200 899
+
+Response
+---------
+{
+    "count": 3,
+    "next": "http://127.0.0.1:8000/api/bookstore/allbooks/apiview/?page=2&search=4.5",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "name": "Data visualization",
+            "pages": 30,
+            "price": "300.00",
+            "rating": 4.5,
+            "pubdate": "2020-05-22T15:07:45.950379Z",
+            "publisher": {
+                "id": 1,
+                "name": "Vissu publications"
+            },
+            "author": [
+                {
+                    "id": 1,
+                    "name": "Vissu",
+                    "email": "viswanadh.adapala.org@gmail.com",
+                    "age": 25
+                },
+                {
+                    "id": 2,
+                    "name": "Mani",
+                    "email": null,
+                    "age": 24
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "name": "Java for Android",
+            "pages": 40,
+            "price": "300.00",
+            "rating": 4.5,
+            "pubdate": "2020-05-22T15:07:45Z",
+            "publisher": {
+                "id": 4,
+                "name": "Dileep publications"
+            },
+            "author": [
+                {
+                    "id": 3,
+                    "name": "Dinesh",
+                    "email": "dinesh@email.com",
+                    "age": 25
+                },
+                {
+                    "id": 4,
+                    "name": "Dileep",
+                    "email": "dileepchaluvadi@gmail.com",
+                    "age": 25
+                }
+            ]
+        }
+    ]
+}
+
+
+[20/Jun/2020 13:51:10] "GET /api/bookstore/allbooks/apiview/?search=4.5&ordering=publisher HTTP/1.1" 200 682
+
+Response
+---------
+{
+    "count": 3,
+    "next": "http://127.0.0.1:8000/api/bookstore/allbooks/apiview/?ordering=publisher&page=2&search=4.5",
+    "previous": null,
+    "results": [
+        {
+            "id": 6,
+            "name": "Java for Android",
+            "pages": 40,
+            "price": "300.00",
+            "rating": 4.5,
+            "pubdate": "2020-05-22T15:07:45Z",
+            "publisher": {
+                "id": 4,
+                "name": "Dileep publications"
+            },
+            "author": [
+                {
+                    "id": 3,
+                    "name": "Dinesh",
+                    "email": "dinesh@email.com",
+                    "age": 25
+                },
+                {
+                    "id": 4,
+                    "name": "Dileep",
+                    "email": "dileepchaluvadi@gmail.com",
+                    "age": 25
+                }
+            ]
+        },
+        {
+            "id": 7,
+            "name": "Kotlin for Android",
+            "pages": 30,
+            "price": "450.00",
+            "rating": 4.5,
+            "pubdate": "2020-05-22T15:07:45Z",
+            "publisher": {
+                "id": 3,
+                "name": "Dinesh publications"
+            },
+            "author": [
+                {
+                    "id": 4,
+                    "name": "Dileep",
+                    "email": "dileepchaluvadi@gmail.com",
+                    "age": 25
+                }
+            ]
+        }
+    ]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

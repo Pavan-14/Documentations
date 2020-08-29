@@ -1,0 +1,572 @@
+Django rest framework serializers
+----------------------------------
+
+First create a file with the name 'serializers.py' inside api directory.
+
+
+Serializers allow complex data such as querysets and model instances to be converted to native Python datatypes that can then be easily rendered into JSON, XML or 
+other content types.
+
+Serializers also provide deserialization, allowing parsed data to be converted back into complex types, after first validating the incoming data.
+
+There are 2 types of Serializers:
+
+1. General Serializer
+
+2. Model Serializer
+
+
+
+1 General Serializer
+-------------------
+We'll declare a serializer class that we can use to serialize and deserialize data that corresponds to model objects.
+
+1.1 Serializers.py file
+------------------------
+from rest_framework import serializers
+
+class Authorserializer(serializers.Serializer):
+    name = serializers.CharField(max_length=50)
+    email = serializers.EmailField()
+    age = serializers.IntergerField()
+
+
+1.2 Serializing objects
+------------------------
+We can now use Authorserializerto serialize a Author, or list of Authors.
+
+serializer = CommentSerializer(comment)
+serializer.data
+
+# {'name': 'xyz', 'email': 'ayz@gmail.com', 'age': '20'}
+
+At this point we've translated the model instance into Python native datatypes. To finalise the serialization process we render the data into json.
+
+from rest_framework.renderers import JSONRenderer
+
+json = JSONRenderer().render(serializer.data)
+json
+
+# b'{"name":"xyz","email":"xyz@gmail.com","age":"20"}'
+
+
+1.3 Deserializing objects
+--------------------------
+import io
+from rest_framework.parsers import JSONParser
+
+stream = io.BytesIO(json)            # Reading input data from io,  input may be any type
+data = JSONParser().parse(stream)    # Parsing the recevied input data. i.e, converting recevied input data into python native datatypes
+
+then we restore those native datatypes into a dictionary of validated data.
+
+serializer = CommentSerializer(data=data)   # Deserializing the parsed data. i.e, translated the Python native datatypes into model instance
+if serializer.is_valid():
+    serializer.validated_data      # Displays the validated data.
+
+
+1.4 Saving instances
+---------------------
+If we want to be able to return complete object instances based on the validated data we need to implement one or both of the .create() and .update() methods.
+
+Serializers.py file
+--------------------
+from rest_framework import serializers
+from Bookstore.models import Author
+
+class Authorserializer(serializers.Serializer):
+    name = serializers.CharField(max_length=50)
+    email = serializers.EmailField()
+    age = serializers.IntergerField()
+
+    def create(self, validated_data):
+        return Author.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get('name', instance.name)
+        instance.email = validated_data.get('email', instance.email)
+        instance.age = validated_data.get('age', instance.age)
+        instance.save()
+        return instance
+
+
+Now when deserializing data, we can call .save() to return an object instance, based on the validated data.
+
+serializer = Authorserializer(data=data)
+if serializer.is_valid():
+    author = serializer.save()
+
+
+Calling .save() will either create a new instance, or update an existing instance, depending on if an existing instance was passed when instantiating the serializer 
+class.
+
+# .save() will create a new instance.
+serializer = Authorserializer(data=data)
+
+# .save() will update the existing `comment` instance.
+serializer = Authorserializer(author, data=data)
+
+
+NOTE: 
+------
+Both the .create() and .update() methods are optional. You can implement either neither, one, or both of them, depending on the use-case for your serializer class.
+
+
+Passing additional attributes to .save()
+-----------------------------------------
+Sometimes you'll want your view code to be able to inject additional data at the point of saving the instance. This additional data might include information like the 
+current user, the current time, or anything else that is not part of the request data.
+
+You can do so by including additional keyword arguments when calling .save().
+
+serializer.save(owner=request.user)
+
+
+
+Overriding .save() directly
+----------------------------
+
+In some cases the .create() and .update() method names may not be meaningful. For example, in a contact form we may not be creating new instances, but instead sending 
+an email or other message.
+
+In these cases you might instead choose to override .save() directly.
+
+class ContactForm(serializers.Serializer):
+    email = serializers.EmailField()
+    message = serializers.CharField()
+
+    def save(self):
+        email = self.validated_data['email']
+        message = self.validated_data['message']
+        send_email(from=email, message=message)
+
+
+
+1.5 Validation
+---------------
+When deserializing data, you always need to call is_valid() before attempting to access the validated data, or save an object instance.
+
+If any validation errors occur, the .errors property will contain a dictionary representing the resulting error messages.
+
+EX:
+----
+serializer = Authorserializer(data={'name': 'xyz', 'email': 'xyz@gmail.com'})
+
+if serializer.is_valid():
+    serializer.save()
+
+else:
+    serializer.errors
+
+# {'email': ['Enter a valid e-mail address.'], 'age': ['This field is required.']}
+
+
+Each key in the dictionary will be the field name, and the values will be lists of strings of any error messages corresponding to that field.
+
+The non_field_errors key may also be present, and will list any general validation errors. The name of the non_field_errors key may be customized using 
+the NON_FIELD_ERRORS_KEY REST framework setting.
+
+
+Raising an exception on invalid data
+-------------------------------------
+The .is_valid() method takes an optional raise_exception flag that will cause it to raise a serializers.ValidationError exception if there are validation errors.
+
+These exceptions are automatically dealt with by the default exception handler that REST framework provides, and will return HTTP 400 Bad Request responses by default.
+
+# Return a 400 response if the data was invalid.
+serializer.is_valid(raise_exception=True)
+
+
+Field-level validation
+-----------------------
+You can specify custom field-level validation by adding .validate_<field_name> methods to your Serializer subclass.These are similar to the .clean_<field_name> methods 
+on Django forms.
+
+These methods take a single argument, which is the field value that requires validation.
+
+Your validate_<field_name> methods should return the validated value or raise a serializers.ValidationError
+
+Ex:
+----
+from rest_framework import serializers
+from Bookstore.models import Author
+
+class Authorserializer(serializers.Serializer):
+    name = serializers.CharField(max_length=50)
+    email = serializers.EmailField()
+    age = serializers.IntergerField()
+    
+    def validate_age(self, value):
+        """
+        Check that the age of author is above 18.
+        """
+        
+        if value < 18:
+            raise serializers.ValidationError("Age is less than 18")
+        return value
+
+NOTE:
+------ 
+If your <field_name> is declared on your serializer with the parameter required=False then this validation step will not take place if the field is not included.
+
+
+Object-level validation
+------------------------
+To do any other validation that requires access to multiple fields, add a method called .validate() to your Serializer subclass. 
+
+This method takes a single argument, which is a dictionary of field values. 
+
+It should raise a serializers.ValidationError if necessary, or just return the validated values
+
+Ex:
+----
+from rest_framework import serializers
+
+class EventSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=100)
+    start = serializers.DateTimeField()
+    finish = serializers.DateTimeField()
+
+    def validate(self, data):
+        """
+        Check that start is before finish.
+        """
+        if data['start'] > data['finish']:
+            raise serializers.ValidationError("finish must occur after start")
+        return data
+
+
+Validators
+------------
+Individual fields on a serializer can include validators, by declaring them on the field instance
+
+def namecheck(value):
+    if value.isalnum:
+        raise serializers.ValidationError('Author name cannot contain numbers')
+
+
+class Authorserializer(serializers.Serializer):
+    name = serializers.CharField(max_length=50, validators=[namecheck])
+    email = serializers.EmailField()
+    age = serializers.IntergerField()
+
+
+
+1.6 Accessing the initial data and instance
+--------------------------------------------
+pass for now
+
+
+
+
+1.7 Partial updates
+--------------------
+
+By default, serializers must be passed values for all required fields or they will raise validation errors. You can use the partial argument in order to allow partial 
+updates
+
+# Update `author` with partial data
+serializer = Authorserializer(author, data={'name': 'xyz', 'email': 'xyz@gmail.com'}, partial=True)
+
+
+
+1.8 Dealing with nested objects
+--------------------------------
+
+The previous examples are fine for dealing with objects that only have simple datatypes, but sometimes we also need to be able to represent more complex objects, 
+where some of the attributes of an object might not be simple datatypes such as strings, dates or integers.
+
+The Serializer class is itself a type of Field, and can be used to represent relationships where one object type is nested inside another.
+
+Ex:
+----
+class UserSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    username = serializers.CharField(max_length=100)
+
+class CommentSerializer(serializers.Serializer):
+    user = UserSerializer()
+    content = serializers.CharField(max_length=200)
+    created = serializers.DateTimeField()
+
+
+If a nested representation may optionally accept the None value you should pass the required=False flag to the nested serializer.
+
+class CommentSerializer(serializers.Serializer):
+    user = UserSerializer(required=False)   		# May be an anonymous user.
+    content = serializers.CharField(max_length=200)
+    created = serializers.DateTimeField()
+
+Similarly if a nested representation should be a list of items, you should pass the many=True flag to the nested serialized.
+
+class CommentSerializer(serializers.Serializer):
+    user = UserSerializer(required=False)
+    edits = EditItemSerializer(many=True)  		# A nested list of 'edit' items.
+    content = serializers.CharField(max_length=200)
+    created = serializers.DateTimeField()
+
+
+
+1.9 Writable nested representations
+------------------------------------
+When dealing with nested representations that support deserializing the data, any errors with nested objects will be nested under the field name of the nested object.
+
+serializer = CommentSerializer(data={'user': {'email': 'foobar', 'username': 'doe'}, 'content': 'baz'})
+serializer.is_valid()
+# False
+serializer.errors
+# {'user': {'email': ['Enter a valid e-mail address.']}, 'created': ['This field is required.']}
+
+
+Similarly, the .validated_data property will include nested data structures.
+
+
+Writing .create() methods for nested representations
+-----------------------------------------------------
+If you're supporting writable nested representations you'll need to write .create() or .update() methods that handle saving multiple objects.
+
+class UserSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer()
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'profile']
+
+    def create(self, validated_data):
+        profile_data = validated_data.pop('profile')
+        user = User.objects.create(**validated_data)
+        Profile.objects.create(user=user, **profile_data)
+        return user
+
+Writing .update() methods for nested representations
+------------------------------------------------------
+For updates you'll want to think carefully about how to handle updates to relationships. For example if the data for the relationship is None, or not provided, which 
+of the following should occur?
+
+	Set the relationship to NULL in the database.
+	Delete the associated instance.
+	Ignore the data and leave the instance as it is.
+	Raise a validation error.
+
+Here's an example for an .update() method on our previous UserSerializer class.
+
+def update(self, instance, validated_data):
+        profile_data = validated_data.pop('profile')
+        # Unless the application properly enforces that this field is
+        # always set, the follow could raise a `DoesNotExist`, which
+        # would need to be handled.
+        profile = instance.profile
+
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.save()
+
+        profile.is_premium_member = profile_data.get(
+            'is_premium_member',
+            profile.is_premium_member
+        )
+        profile.has_support_contract = profile_data.get(
+            'has_support_contract',
+            profile.has_support_contract
+         )
+        profile.save()
+
+        return instance
+
+
+
+1.10 Dealing with multiple objects
+-----------------------------------
+The Serializer class can also handle serializing or deserializing lists of objects.
+
+Serializing multiple objects
+------------------------------
+To serialize a queryset or list of objects instead of a single object instance, you should pass the many=True flag when instantiating the serializer. 
+You can then pass a queryset or list of objects to be serialized.
+
+queryset = Author.objects.all()
+serializer = Authorserializer(queryset, many=True)
+serializer.data
+
+
+Deserializing multiple objects
+-------------------------------
+pass for now
+
+later refer this link "https://www.django-rest-framework.org/api-guide/serializers/#listserializer" to study about it 
+
+
+1.11 Including extra context
+-----------------------------
+pass for now
+
+
+
+
+2. Model Serializer
+--------------------
+if we want serializer classes that map closely to Django model definitions.
+
+The ModelSerializer provides a shortcut that lets you automatically create a Serializer class with fields that correspond to the Model fields. just like model forms.
+
+The ModelSerializer class is the same as a regular Serializer class, except that:
+
+	It will automatically generate a set of fields for you, based on the model.
+	It will automatically generate validators for the serializer, such as unique_together validators.
+	It includes simple default implementations of .create() and .update().
+
+
+
+2.1 Declaring a ModelSerializer
+--------------------------------
+from rest_framework import serializers
+from Bookstore.models import Author, Book, Publisher
+
+class Bookserializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fileds = ['author', 'publisher', 'name', 'pages', 'price', 'rating', 'pubdate']
+
+
+By default, all the model fields on the class will be mapped to a corresponding serializer fields.
+
+Any relationships such as foreign keys on the model will be mapped to PrimaryKeyRelatedField.
+
+Reverse relationships are not included by default unless explicitly included as specified in the serializer relations documentation.
+
+
+Inspecting a ModelSerializer
+---------------------------------
+Serializer classes generate helpful verbose representation strings, that allow you to fully inspect the state of their fields.
+
+This is particularly useful when working with ModelSerializers where you want to determine what set of fields and validators are being automatically created for you.
+
+
+To do so, open the Django shell, using python manage.py shell, then import the serializer class, instantiate it, and print the object representation.
+
+>>> from Bookstore.Api.serializers import Bookserializer
+>>>
+>>> seria = Bookserializer()
+>>>
+>>> print(repr(seria))
+Bookserializer():
+    author = PrimaryKeyRelatedField(allow_empty=False, help_text='press ctl and select more authors', label='Author name', many=True, queryset=Author.objects.all())
+    publisher = PrimaryKeyRelatedField(label='Publisher name', queryset=Publisher.objects.all())
+    name = CharField(label='Book name', max_length=50)
+    pages = IntegerField(label='Number of pages')
+    price = DecimalField(decimal_places=2, max_digits=30)
+    rating = FloatField()
+    pubdate = DateTimeField(label='Published date', required=False)
+>>>
+
+
+2.2 Specifying which fields to include
+---------------------------------------
+
+class Bookserializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ['author', 'publisher', 'name', 'pages', 'price', 'rating', 'pubdate']    # '__all__' to include all fields
+
+
+You can set the exclude attribute to a list of fields to be excluded from the serializer.
+
+class Bookserializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ['author', 'publisher', 'name', 'pages', 'price', 'rating', 'pubdate']    # '__all__' to include all fields
+        exclude = []                                                                       # fields to exclude
+        
+
+
+
+2.3 Specifying nested serialization
+------------------------------------
+The default ModelSerializer uses primary keys for relationships, but you can also easily generate nested representations using the depth option.
+
+Ex:
+----
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'account_name', 'users', 'created']
+        depth = 1
+
+The depth option should be set to an integer value that indicates the depth of relationships that should be traversed before reverting to a flat representation.
+
+
+
+2.4 Specifying fields explicitly
+---------------------------------
+You can add extra fields to a ModelSerializer or override the default fields by declaring fields on the class, just as you would for a Serializer class.
+
+Ex:
+----
+class AccountSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(source='get_absolute_url', read_only=True)
+    groups = serializers.PrimaryKeyRelatedField(many=True)
+
+    class Meta:
+        model = Account
+
+
+Extra fields can correspond to any property or callable on the model.
+
+
+
+
+2.5 Specifying read only fields
+--------------------------------
+You may wish to specify multiple fields as read-only. Instead of adding each field explicitly with the read_only=True attribute, you may use the shortcut Meta option, 
+read_only_fields.
+
+This option should be a list or tuple of field names, 
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'account_name', 'users', 'created']
+        read_only_fields = ['account_name']
+
+
+NOTE:
+------
+Model fields which have editable=False set, and AutoField fields will be set to read-only by default, and do not need to be added to the read_only_fields option.
+
+
+
+2.6 Nested relationships
+-------------------------
+If the field is used to represent a to-many relationship, you should add the many=True flag to the serializer field.
+
+Ex:
+----
+class TrackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Track
+        fields = ['order', 'title', 'duration']
+
+class AlbumSerializer(serializers.ModelSerializer):
+    tracks = TrackSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Album
+        fields = ['album_name', 'artist', 'tracks']
+
+
+
+
+
+
+
+
+3. HyperlinkedModelSerializer
+-------------------------------
+pass for now
+
+
+
+
+4. ListSerializer
+------------------

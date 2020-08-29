@@ -1,0 +1,414 @@
+=======================================================================================================================================================================
+									Forms in Django
+=======================================================================================================================================================================
+
+
+The Django Form class:
+-----------------------
+In much the same way that a Django model describes the logical structure of an object, its behavior, and the way its parts are represented to us, a Form class 
+describes a form and determines how it works and appears.
+
+In a similar way that a model class’s fields map to database fields, a form class’s fields map to HTML form <input> elements.
+
+A ModelForm maps a model class’s fields to HTML form <input> elements via a Form.
+
+A form’s fields are themselves classes; they manage form data and perform validation when a form is submitted. 
+
+A DateField and a FileField handle very different kinds of data and have to do different things with it.
+
+A form field is represented to a user in the browser as an HTML “widget” - a piece of user interface machinery. 
+
+Each field type has an appropriate default Widget class, but these can be overridden as required.
+
+
+
+
+Instantiating, processing, and rendering forms
+-----------------------------------------------
+When rendering an object in Django, we generally follow below steps
+
+	1. get hold of it in the view (fetch it from the database, for example)
+	2. pass it to the template context
+	3. expand it to HTML markup using template variables
+
+
+Rendering a form in a template involves nearly the same work as rendering any other kind of object, but there are some key differences.
+
+In the case of a model instance that contained no data, it would rarely if ever be useful to do anything with it in a template. On the other hand, it makes perfect 
+sense to render an unpopulated form - that’s what we do when we want the user to populate it.
+
+
+So when we handle a model instance in a view, we typically retrieve it from the database. When we’re dealing with a form we typically instantiate it in the view.
+
+
+*** When we instantiate a form, we can opt to leave it empty or pre-populate it, for example with:
+
+	1. data from a saved model instance (as in the case of admin forms for editing)
+	2. data that we have collated from other sources
+	3. data received from a previous HTML form submission
+
+
+
+Building a form in Django
+--------------------------
+1. Create a new file with the name 'forms.py' in the app directory/folder
+
+2. Create a class for the form which we want to use like below.
+
+
+from django import forms
+
+class NameForm(forms.Form):
+    your_name = forms.CharField(label='Your name', max_length=100)
+
+
+
+This defines a Form class with a single field (your_name). 
+
+We’ve applied a human-friendly label to the field, which will appear in the <label> when it’s rendered (although in this case, the label we specified is actually the 
+same one that would be generated automatically if we had omitted it).
+
+
+
+The field’s maximum allowable length is defined by max_length. This does two things. 
+
+	1. It puts a maxlength="100" on the HTML <input> (so the browser should prevent the user from entering more than that number of characters in the first place).
+  	
+	2. It also means that when Django receives the form back from the browser, it will validate the length of the data.
+
+
+
+A Form instance has an is_valid() method, which runs validation routines for all its fields. When this method is called, if all fields contain valid data, it will:
+
+	1. return True
+
+	2. place the form’s data in its cleaned_data attribute.
+
+
+The whole form, when rendered for the first time, will look like:
+
+	<label for="your_name">Your name: </label>
+	<input id="your_name" type="text" name="your_name" maxlength="100" required>
+
+
+*** Note that it does not include the <form> tags, or a submit button. We’ll have to provide those ourselves in the template.
+
+
+
+
+Processing Form in The view
+----------------------------
+Form data sent back to a Django website is processed by a view, generally the same view which published the form. This allows us to reuse some of the same logic.
+
+To handle the form we need to instantiate it in the view for the URL where we want it to be published.
+
+
+Views.py
+--------
+
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+
+from .forms import NameForm
+
+def get_name(request):
+    
+    if request.method == 'POST':                                    # if this is a POST request we need to process the form data
+        
+        form = NameForm(request.POST)                               # create a form instance and populate it with data from the request:
+        
+        if form.is_valid():		                            # check whether it's valid
+
+            # process the data in form.cleaned_data as required
+            # ...
+            # redirect to a new URL:
+            return HttpResponseRedirect('/thanks/')
+
+    
+    else:
+        form = NameForm()                                            # if a GET (or any other method) we'll create a blank form.
+
+
+    return render(request, 'name.html', {'form': form})
+
+
+
+
+1. If we arrive at this view with a GET request, it will create an empty form instance and place it in the template context to be rendered. This is what we can expect 
+to happen the first time we visit the URL.
+
+2. If the form is submitted using a POST request, the view will once again create a form instance and populate it with data from the request: 
+form = NameForm(request.POST) This is called “binding data to the form” (it is now a bound form).
+
+3. We call the form’s is_valid() method; if it’s not True, we go back to the template with the form. This time the form is no longer empty (unbound) so the HTML form 
+will be populated with the data previously submitted, where it can be edited and corrected as required.
+
+4. If is_valid() is True, we’ll now be able to find all the validated form data in its cleaned_data attribute. We can use this data to update the database or do other 
+processing before sending an HTTP redirect to the browser telling it where to go next.
+
+
+
+Rendering Form in The template
+-------------------------------
+
+<form action="/your-name/" method="post">
+    {% csrf_token %}
+    {{ form }} (or) {{ form.as_p }}
+    <input type="submit" value="Submit">
+</form>
+
+
+All the form’s fields and their attributes will be unpacked into HTML markup from that {{ form }} by Django’s template language.
+
+
+NOTE
+-----
+
+1. Forms and Cross Site Request Forgery protection
+
+Django ships with an easy-to-use protection against Cross Site Request Forgeries. When submitting a form via POST with CSRF protection enabled you must use the 
+csrf_token template tag as in the preceding example. However, since CSRF protection is not directly tied to forms in templates, this tag is omitted from the following 
+examples in this document.
+
+
+2. HTML5 input types and browser validation
+
+If your form includes a URLField, an EmailField or any integer field type, Django will use the url, email and number HTML5 input types. By default, browsers may apply 
+their own validation on these fields, which may be stricter than Django’s validation. If you would like to disable this behavior, set the novalidate attribute on the 
+form tag, or specify a different widget on the field, like TextInput.
+
+
+
+
+More about Django Form classes
+-------------------------------
+1. All form classes are created as subclasses of either django.forms.Form or django.forms.ModelForm.
+
+2. You can think of ModelForm as a subclass of Form. 
+
+3. Form and ModelForm actually inherit common functionality from a (private) BaseForm class, but this implementation detail is rarely important.
+
+4. In fact if your form is going to be used to directly add or edit a Django model, a ModelForm can save you a great deal of time, effort, and code, because it will 
+   build a form, along with the appropriate fields and their attributes, from a Model class.
+
+
+
+Bound and unbound form instances
+---------------------------------
+The distinction between Bound and unbound forms is important:
+
+1. An unbound form has no data associated with it. When rendered to the user, it will be empty or will contain default values.
+
+2. A bound form has submitted data, and hence can be used to tell if that data is valid. If an invalid bound form is rendered, it can include inline error messages 
+   telling the user what data to correct.
+
+3. The form’s is_bound attribute will tell you whether a form has data bound to it or not.
+
+
+
+Widgets
+--------
+1. Each form field has a corresponding Widget class, which in turn corresponds to an HTML form widget such as <input type="text">.
+
+2. In most cases, the field will have a sensible default widget. For example, by default, a CharField will have a TextInput widget, that produces an 
+   <input type="text"> in the HTML.
+
+3. If you needed <textarea> instead, you’d specify the appropriate widget when defining your form field.
+
+
+Ex:
+----
+class authorform(forms.Form):
+    authname = forms.CharField(widget=forms.TextInput(attrs={'class':'form-control'}), label='Author Name', max_length=50)
+    email = forms.EmailField(widget=forms.EmailInput(attrs={'class':'form-control'}), label='Email', max_length=70)
+    age = forms.IntegerField(widget=forms.NumberInput(attrs={'class':'form-control'}), label='Age')
+
+
+
+
+
+Form Field data
+----------------
+
+1. Whatever the data submitted with a form, once it has been successfully validated by calling is_valid(), the validated form data will be in the form.cleaned_data 
+dictionary. 
+
+2. This data will have been nicely converted into Python types for you.
+
+3. You can still access the unvalidated data directly from request.POST at this point, but the validated data is better.
+
+
+Ex:
+----
+def addauthor(request):
+    if request.method == 'POST':
+        form = forms.authorform(request.POST)
+        
+        if form.is_bound:                              # tell you whether the form has data bound to it or not
+            if form.is_valid():                         
+                name = form.cleaned_data['authname']
+                email = form.cleaned_data['email']
+                age = form.cleaned_data['age']
+            
+                author = Author.objects.create(name = name, email=email, age=age)
+
+
+
+NOTE:
+------
+Some field types need some extra handling. For example, files that are uploaded using a form need to be handled differently, they can be retrieved from 
+request.FILES, instead of request.POST.
+
+
+
+Binding uploaded files to a form
+---------------------------------
+pass for now
+
+
+
+
+
+Working with form templates
+----------------------------
+
+All you need to do to get your form into a template is to place the form instance into the template context. So if your form is called form in the context, 
+{{ form }} will render its <label> and <input> elements appropriately.
+
+
+NOTE:
+------
+Don’t forget that a form’s output does not include the surrounding <form> tags, or the form’s submit control. You will have to provide these yourself.
+
+
+Form rendering options
+-----------------------
+There are other output options though for the <label>/<input> pairs:
+
+1. {{ form.as_table }} will render them as table cells wrapped in <tr> tags
+2. {{ form.as_p }} will render them wrapped in <p> tags
+3. {{ form.as_ul }} will render them wrapped in <li> tags
+
+NOTE:
+------
+Note that you’ll have to provide the surrounding <table> or <ul> elements yourself.
+
+
+
+Looping over the form’s fields
+-------------------------------
+If you’re using the same HTML for each of your form fields, you can reduce duplicate code by looping through each field in turn using a {% for %} loop:
+
+
+EX:
+----
+
+{% for field in form %}
+
+<div class="control-group">
+
+     <label for="" class="control-label">{{ field.label }}</label>
+     <div class='control'>
+          {{ field }}
+     </div>
+
+</div>
+
+
+{% endfor %}
+
+
+
+Useful attributes on {{ field }} include:
+------------------------------------------
+
+1. {{ field.label }}          ===>    The label of the field, (e.g. Email address)
+
+2. {{ field.label_tag }}      ===>    The label of the field with colon(default), (e.g. Email address:)
+
+3. {{ field.id_for_label }}   ===>    Gives The ID that will be used for this field ("id_email" in the example above)
+
+4. {{ field.value }}          ===>    Gives The value of the field. (e.g someone@example.com)
+
+5. {{ field.html_name }}      ===>    The name of the field that will be used in the input element’s name field.
+
+6. {{ field.help_text }}      ===>    Any help text that has been associated with the field.
+
+7. {{ field.errors }}         ===>    Outputs a <ul class="errorlist"> containing any validation errors corresponding to this field. You can customize the presentation
+ 				      of the errors with a {% for error in field.errors %} loop. In this case, each object in the loop is a string containing the error
+		 		      message.
+
+
+8. {{ field.is_hidden }}      ===>    This attribute is True if the form field is a hidden field and False otherwise.
+
+9. {{ field.field }}          ===>    The Field instance from the form class that this BoundField wraps. You can use it to access Field attributes like max_length etc.
+				      ( Ex: {{field.field.max_length}} ).
+
+
+
+Rendering form error messages
+------------------------------
+
+{% for field in form %}
+
+    {% if field.errors %}
+
+    <div class="control-group error">
+        <label for="" class="control-label">{{ field.label }}</label>
+        <div class="controls">
+            {{ field }}
+            <span class="help-inline">
+                {% for error in field.errors %}
+                {{ error }}
+                {% endfor %}
+
+            </span>
+        </div>
+    </div>
+    
+    {% endif %}
+
+{% endfor %}
+
+
+
+Looping over hidden and visible fields
+---------------------------------------
+
+If you’re manually laying out a form in a template, as opposed to relying on Django’s default form layout, you might want to treat <input type="hidden"> fields 
+differently from non-hidden fields.
+
+
+For example, because hidden fields don’t display anything, putting error messages “next to” the field could cause confusion for your users – so errors for those 
+fields should be handled differently.
+
+
+Django provides two methods on a form that allow you to loop over the hidden and visible fields independently: 
+
+1. hidden_fields()
+
+2. visible_fields().
+
+
+{% for hidden in form.hidden_fields %}
+{{ hidden }}
+{% endfor %}
+
+
+
+{% for field in form.visible_fields %}
+    <div class="fieldWrapper">
+        {{ field.errors }}
+        {{ field.label_tag }} {{ field }}
+    </div>
+{% endfor %}
+
+
+
+
+
+
+
+
+
+

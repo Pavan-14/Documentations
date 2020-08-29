@@ -1,0 +1,178 @@
+======================================================================================================================================================================
+								Managing files and Using files in models
+======================================================================================================================================================================
+
+By default, Django stores files locally, using the MEDIA_ROOT and MEDIA_URL settings.
+
+MEDIA_ROOT is the path where  to store uploaded files.
+
+MEDIA_URL is used to create url for the uploaed files to access them on the browser.
+
+However, Django provides ways to write custom file storage systems that allow you to completely customize where and how Django stores files.
+
+
+
+Using files in models
+----------------------
+
+When you use a FileField or ImageField, Django provides a set of APIs you can use to deal with that file.
+
+Consider the following model, using an ImageField to store a photo.
+
+
+class Vichel(models.Model):
+    name = models.CharField(max_length=50)
+    cost = models.DecimalField(max_digits=10, decimal_places=2)
+    image = models.ImageField(upload_to='Images/Vichel')
+    
+    class Meta:
+        ordering = ['name']
+        
+    def __str__(self):
+        return self.name
+
+
+NOTE:
+------
+When we are using a FileField or ImageField in our model and we want to render the ModelForm for that model in the template then don't forget to define
+
+enctype="multipart/form-data" attribute of open form tag.
+
+
+<form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button class="btn btn-primary" type="submit">Add</button>
+</form> 
+
+
+If we forget to define enctype="multipart/form-data" attribute on form then file will not be uploaded, Because request.FILES will be an empty dictionary so the 
+browsed image file is not mapped to the model's image field so, the field will be empty as a result form.is_valid() is going to return False in the view processing.
+So form.save() will not be executed.
+
+This will gives "This Field is required" error in the form template.
+
+
+View processing of form with FileFields
+----------------------------------------
+
+def addvichel(request):
+    if request.method == 'POST':
+        form = forms.Vichelform(request.POST, request.FILES)
+        if form.is_bound:                              # tell you whether the form has data bound to it or not
+            if form.is_valid():
+                form.save()
+                form = forms.Vichelform()
+                messages.success(request, 'Vichel added successfully')
+    else:
+        form = forms.Vichelform()
+        
+    return render(request, 'addvichel.html', {'form' : form}) 
+
+
+
+
+Any Vichel instance will have a image attribute that you can use to get at the details of the attached image.
+
+>>> v = Vichel.objects.get(name = 'Audi-A7')
+>>> v
+<Vichel: Audi-A7>
+
+
+>>> v.image
+<ImageFieldFile: vichel/audi.jpg>
+
+
+>>> v.image.name
+'vichel/audi.jpg'
+
+
+>>> v.image.path
+'C:\\Users\\Vissu\\Desktop\\Web-Dev\\Django2.0.7_Py3.6.5\\Dlearning\\Bookstore\\static\\images\\vichel\\audi.jpg'
+
+
+>>> v.image.url
+'/media/vichel/audi.jpg'
+
+
+If we entered this image url to access the image in the browser it will not show, for that we need to add some code in the project level url.py file.
+
+
+in project urls.py file
+--------------------
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('bookstore/', include('Bookstore.urls')),
+]
+
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+
+Whilst ImageField non-image data attributes, such as height, width, and size are available on the instance, the underlying image data cannot be used without reopening 
+the image.
+
+Ex:
+----
+
+from PIL import Image
+
+>>> v = Vichel.objects.get(name__iexact = 'audi-a7')
+>>> v
+<Vichel: Audi-A7>
+
+>>> v.image.height
+853
+
+>>> v.image.width
+1280
+
+
+>>> img = Image.open(v.image)
+>>> img
+<PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=1280x853 at 0x2B540F3EBA8>
+
+
+
+The File object
+----------------
+
+Internally, Django uses a django.core.files.File instance any time it needs to represent a file.
+
+Most of the time you’ll use a File that Django’s given you (i.e. a file attached to a model as above, or perhaps an uploaded file).
+
+If you need to construct a File yourself, the easiest way is to create one using a Python built-in file object.
+
+
+Ex:
+----
+
+from django.core.files import File
+
+with open('file path', 'w') as f:
+    myfile = File(f)
+    myfile.write('Hello World')
+
+
+Closing files is especially important when accessing file fields in a loop over a large number of objects. If files are not manually closed after accessing them, the 
+risk of running out of file descriptors may arise. This may lead to the following error.
+
+
+OSError: [Errno 24] Too many open files
+
+
+
+File storage
+-------------
+pass for now
+
+
+
+
+
+

@@ -1,0 +1,121 @@
+=======================================================================================================================================================================
+									The Django template language
+=======================================================================================================================================================================
+
+The syntax of the Django template language involves four constructs.
+
+1. Variables
+
+2. Tags
+
+3. Filters
+
+4. Comments
+
+
+
+
+
+Variables
+----------
+
+A variable outputs a value from the context, which is a dict-like object mapping keys to values.
+
+Variables are surrounded by  " {{ VARIABLE_NAME }} "
+
+
+Dictionary lookup, object's attribute lookup and list-index lookups are implemented with a dot notation.
+
+{{ my_dict.key }}
+{{ my_object.attribute }}
+{{ my_list.0 }}
+
+
+
+Tags
+-----
+
+Tags provide arbitrary logic in the rendering process.
+
+Tags are surrounded by  " {% TAG_NAME %} "
+
+Ex:
+----
+{% csrf_token %}
+
+
+Some tags require beginning and ending tags.
+
+Ex:
+----
+{% if field.errors %}
+
+{% endif %}
+
+
+{% block content %}
+
+{% endblock %}
+
+
+*** For more built-in tags info refer this link "https://docs.djangoproject.com/en/3.0/ref/templates/builtins/#ref-templates-builtins-tags".
+
+
+
+
+Filters
+--------
+
+Filters transform the values of variables and tag arguments.
+
+Filters are surrounded by  " {{ VARIABILE_NAME | FILTER_TO_APPLY }} "
+
+EX:
+----
+
+context = {'django': 'the web framework for perfectionists with deadlines'}
+
+
+{{ django | title }}
+
+
+title filter Converts a string into titlecase by making words start with an uppercase character and the remaining characters lowercase.
+
+
+O/P: The Web Framework For Perfectionists With Deadlines
+
+
+
+Some filters take an argument:
+
+{{ my_date | date:"Y-m-d" }}     # Y => Year, 4 digits '1999' / m => Month, 2 digits with leading zeros. ('01' to '12') / d => Day, 2 digits. ('01' to '31')
+
+
+
+*** For more built-in filters info refer this link "https://docs.djangoproject.com/en/3.0/ref/templates/builtins/#ref-templates-builtins-filters".
+
+
+
+Comments
+---------
+
+{% comment %}
+
+
+{% endcomment %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,188 @@
+=======================================================================================================================================================================
+									Writing Views
+=======================================================================================================================================================================
+A view is nothing but a python function that takes request as first argument and returns response.
+
+This response can be the HTML Web page, or a redirect, or a 404 error, or an XML document, or an image . . . or anything.
+
+Ex:
+----
+
+from django.http import HttpResponse
+
+def my_view(request):
+	
+	return HttpResponse('<h1>This a simple view</h1>')
+
+
+
+-----------------
+Returning errors
+-----------------
+
+Django provides help for returning HTTP error codes. 
+
+For each HTTP error code there is a specific class name and that class subclasses the HttpResponse class.
+
+
+-------------------------------------------------
+stats code	 |	HttpResponse class      |
+-----------------|-------------------------------
+302		 |    HttpResponseRedirect      |
+-------------------------------------------------
+301		 | HttpResponsePermanentRedirect|
+-------------------------------------------------
+304		 |     HttpResponseNotModified  |
+-------------------------------------------------
+400		 |      HttpResponseBadRequest  |
+-------------------------------------------------
+404		 |     HttpResponseNotFound     |
+-------------------------------------------------
+403		 |       HttpResponseForbidden  |
+-------------------------------------------------
+405		 |      HttpResponseNotAllowed  |
+-------------------------------------------------
+410 		 |       HttpResponseGone       |
+-------------------------------------------------
+500		 |      HttpResponseServerError |
+-------------------------------------------------
+
+
+
+path('books/', views.listbooks, name='books-list'),              This is the url pattern for requesting all books.
+path('books/<bookname>/', views.bookname, name='books-name'),    This is the url pattern for requesting specific book with book name.
+
+
+Requesting this url "http://127.0.0.1:8000/bookstore/books/avengers/"  will call the bookname view
+
+
+from django.http import HttpResponse, HttpResponseRedirect
+
+def bookname(request, bookname):
+    
+    QuerySet = Book.objects.filter(name = bookname)
+    
+    if QuerySet:
+        return HttpResponse(QuerySet)
+        
+    else:
+        return HttpResponseRedirect(reverse('books-list', args=None))
+
+
+in this view if the specified book object is not found the it will redirect to the 'books-list' url page and display all the books.
+
+
+Proof logs:
+-----------
+
+[21/May/2020 13:21:54] "GET /bookstore/books/avengers/ HTTP/1.1" 302 0
+[21/May/2020 13:21:54] "GET /bookstore/books/ HTTP/1.1" 200 3918
+
+
+if we use HttpResponseBadRequest in else block the we will get 400 error status code.
+
+[21/May/2020 13:34:40] "GET /bookstore/books/avengers/ HTTP/1.1" 400 17 
+
+
+
+
+NOTE:
+------
+There isn’t a specialized subclass for every possible HTTP response code, since many of them aren’t going to be that common.
+However, you can also pass the HTTP status code into the constructor for HttpResponse (i.e, return HttpResponse(status = code)).
+
+
+
+Since 404 errors are the most common HTTP error, there’s an easier way to handle those errors.
+
+When you return an error such as HttpResponseNotFound, you’re responsible for defining the HTML of the resulting error page:
+
+	return HttpResponseNotFound('<h1>Not Found</h1><br><p>No book found with book name</p>')
+
+But, it’s a good idea to have a consistent 404 error page across your site. So, Django provides an Http404 exception. If you raise Http404 at any 
+point in a view function, Django will catch it and return the standard error page for your application, along with an HTTP error code 404.
+
+
+path('books/<bookname>/', views.bookname, name='books-name'),    This is the url pattern for requesting specific book with book name.
+
+
+from django.http import Http404
+
+def bookname(request, bookname):
+    
+    QuerySet = Book.objects.filter(name = bookname)
+    
+    if QuerySet:
+        return HttpResponse(QuerySet)
+        
+    else:
+        raise Http404('No book found with book name')           # Here no need to define html just pass the message to show
+
+
+if the book not there in the database then else block will raise the Http404 Exception, as a result django's standard 404 page will be loaded in the browser.
+
+=======================================================================standard 404 page========================================================================
+Page not found (404)
+Request Method:	GET
+Request URL:	http://127.0.0.1:8000/bookstore/books/avengers/
+Raised by:	Bookstore.views.bookname
+No book found with book name
+
+You're seeing this error because you have DEBUG = True in your Django settings file. Change that to False, and Django will display a standard 404 page.
+================================================================================================================================================================
+
+
+***NOTE:- If we change the DEBUG = False  in settings.py file the Default 404 error page will look like this
+
+=======================================================================standard 404 page========================================================================
+Not Found
+The requested URL /bookstore/books/avengers/ was not found on this server.
+================================================================================================================================================================
+
+
+
+
+
+In order to show customized HTML when Django returns a 404, you can create an HTML template named 404.html and place it in the top level of your template tree.
+This template will then be served instead of django's standard 404 page when DEBUG is set to False.
+
+When DEBUG is True, you can provide a message to Http404 and it will appear in the standard 404 debug template. Use these messages for debugging purposes; they 
+generally aren’t suitable for use in a production 404 template.
+
+
+
+
+------------------------
+Customizing error views
+------------------------
+The default error views in Django should suffice for most Web applications, but can easily be overridden if you need any custom behavior.
+
+pass for now
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

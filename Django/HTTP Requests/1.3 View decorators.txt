@@ -1,0 +1,529 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+									View decorators
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Django provides several decorators that can be applied to views to support various HTTP features.
+
+-----------------------------------
+1. Allowed HTTP methods decorators
+-----------------------------------
+The decorators in django.views.decorators.http can be used to restrict access to views based on the request method. 
+
+These decorators will return a django.http.HttpResponseNotAllowed if the conditions are not met.
+
+
+1.1 require_http_methods(request_method_list)
+----------------------------------------------
+
+Decorator to require that a view only accepts particular request methods.
+
+
+from django.views.decorators.http import require_http_methods
+
+@require_http_methods(['GET','POST'])
+def my_views(request):
+    pass
+
+
+
+NOTE:
+------
+Note that request methods should be in uppercase.
+
+
+1.2 require_GET
+----------------
+
+Decorator to require that a view only accepts the GET method.
+
+
+1.3 require_POST
+-----------------
+
+Decorator to require that a view only accepts the POST method.
+
+
+1.4 require_safe
+-----------------
+
+Decorator to require that a view only accepts the GET and HEAD methods. These methods are commonly considered “safe” because they should not have the significance of 
+taking an action other than retrieving the requested resource.
+
+	HEAD methods:
+	--------------
+	The HEAD method is used to ask only for information about a document, not for the document itself. HEAD is much faster than GET, as a much smaller amount of 
+	data is transferred. It's often used by clients who use caching, to see if the document has changed since it was last accessed. If it was not, then the local 
+	copy can be reused, otherwise the updated version must be retrieved with a GET. The metainformation contained in the HTTP headers in response to a HEAD 
+	request should be identical to the information sent in response to a GET request. This method can be used for obtaining metainformation about the resource 
+	identified by the request URI without transferring the data itself. This method is often used for testing hypertext links for validity, accessibility, and 
+	recent modification.
+
+
+NOTE:
+------
+Web servers should automatically strip the content of responses to HEAD requests while leaving the headers unchanged, so you may handle HEAD requests exactly like GET
+requests in your views.
+
+Since some software, such as link checkers, rely on HEAD requests, you might prefer using require_safe instead of require_GET.
+
+
+
+
+------------------------------------------
+2. Conditional view processing decorators
+------------------------------------------
+HTTP clients can send a number of headers to tell the server about copies of a resource that they have already seen. This is commonly used when retrieving a Web page 
+(using an HTTP GET request) to avoid sending all the data for something the client has already retrieved. However, the same headers can be used for all HTTP 
+methods (POST, PUT, DELETE, etc.).
+
+
+For each page (response) that Django sends back from a view, it might provide two HTTP headers
+1. ETag header
+2. Last-Modified header
+
+These headers are optional on HTTP responses. They can be set by your view function, or you can rely on the ConditionalGetMiddleware middleware to set the ETag header.
+
+
+When the client next requests the same resource, it might send along a header such as either If-modified-since or If-unmodified-since, containing the date of the last 
+modification time it was sent, or either If-match or If-none-match, containing the last ETag it was sent.
+
+	If the current version of the page matches the ETag sent by the client, or if the resource has not been modified, a 304 status code can be sent back, instead 
+of a full response, telling the client that nothing has changed.
+
+Proof:  Requesting "http://127.0.0.1:8000/bookstore/books/" for the 1st time will load all the resources(CSS,Js,Jquery,Bootatrap) from the server with status code 200.
+-------    
+[22/May/2020 13:17:55] "GET /bookstore/books/ HTTP/1.1" 200 3918
+[22/May/2020 13:17:55] "GET /static/css/base.css HTTP/1.1" 200 317
+[22/May/2020 13:17:55] "GET /static/cdn/bootstrap-3.3.7/css/bootstrap.min.css HTTP/1.1" 200 121200
+[22/May/2020 13:17:56] "GET /static/cdn/bootstrap-3.3.7/jquery/jquery-3.5.1.min.js HTTP/1.1" 200 89476
+[22/May/2020 13:17:56] "GET /static/cdn/bootstrap-3.3.7/js/bootstrap.min.js HTTP/1.1" 200 37045 
+
+
+Requesting "http://127.0.0.1:8000/bookstore/books/" for the 2nd time
+
+[22/May/2020 13:17:55] "GET /bookstore/books/ HTTP/1.1" 200 3918
+[22/May/2020 13:17:55] "GET /static/css/base.css HTTP/1.1" 304 0
+[22/May/2020 13:17:55] "GET /static/cdn/bootstrap-3.3.7/css/bootstrap.min.css HTTP/1.1" 304 0
+[22/May/2020 13:17:56] "GET /static/cdn/bootstrap-3.3.7/jquery/jquery-3.5.1.min.js HTTP/1.1" 304 0
+[22/May/2020 13:37:06] "GET /static/cdn/bootstrap-3.3.7/js/bootstrap.min.js HTTP/1.1" 304 0
+
+
+Depending on the header, if the page has been modified or does not match the ETag sent by the client, a 412 status code (Precondition Failed) may be returned.
+
+
+
+When you need more fine-grained control you may use per-view conditional processing functions.
+
+
+
+2.1 condition decorator
+------------------------
+
+you can create functions to rapidly compute the ETag value or the last-modified time for a resource
+
+These two functions(ETag func, last-modified func) are passed as parameters to the condition decorator.
+
+This decorator uses the two functions to work out if the headers in the HTTP request match those on the resource. If they don’t match, a new copy of the resource must 
+be computed and your normal view is called.
+
+
+condition decorator’s signature looks like this
+------------------------------------------------
+
+*** condition(etag_func=None, last_modified_func=None) ***
+
+
+The two functions, to compute the ETag and the last modified time, will be passed the incoming request object and the same parameters, in the same order, as the view 
+function they are helping to wrap. The function passed last_modified_func should return a standard datetime value specifying the last time the resource was modified, 
+or None if the resource doesn’t exist. The function passed to the etag decorator should return a string representing the ETag for the resource, or None if it doesn’t 
+exist.
+	The decorator sets the ETag and Last-Modified headers on the response if they are not already set by the view and if the request’s method is safe (GET or HEAD)
+
+
+
+Example:
+---------
+Using this feature usefully is probably best explained with an example. Suppose you have this pair of models, representing a small blog system.
+
+
+import datetime
+from django.db import models
+
+class Blog(models.Model):
+    ...
+
+class Entry(models.Model):
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE)
+    published = models.DateTimeField(default=datetime.datetime.now)
+
+
+
+If the html page, displaying the latest blog entries, changes only when you add a new blog entry, you can compute the last modified time very quickly. 
+You need the latest published date for every entry associated with that blog.
+
+
+def latest_entry(request, blog_id):
+    return Entry.objects.filter(blog=blog_id).latest("published").published   # This will return the datetime of latest Entry
+
+
+
+Now passing this function to @condition decorator
+
+
+from django.views.decorators.http import condition
+
+@condition(last_modified_func = latest_entry, etag_func = None)
+def My_view(request, blog_id):
+    pass
+
+
+
+NOTE:
+------
+
+Be careful with the order of decorators. When condition() returns a conditional response, any decorators below it will be skipped and won’t apply to the response. 
+Therefore, any decorators that need to apply to both the regular view response and a conditional response must be above condition(). In particular, vary_on_cookie(), 
+vary_on_headers(), and cache_control() should come first.
+
+
+
+
+2.2 Shortcuts for only computing one value
+---------------------------------------
+
+from django.views.decorators.http import last_modified, etag
+
+@last_modified(latest_entry)
+def my_view(request):
+    pass
+
+@etag(latest_entry)
+def my_view(request):
+    pass
+
+
+*** When testing both conditions(i.e, last_modified and etag) it's better to use condition decorator instead of individual.
+
+
+The condition decorator is useful for more than only GET and HEAD requests (HEAD requests are the same as GET in this situation). It can also be used to provide 
+checking for POST, PUT and DELETE requests.
+	In these situations, the idea isn’t to return a “not modified” response, but to tell the client that the resource they are trying to change has been altered 
+in the meantime.
+
+For example, consider the following exchange between the client and server:
+
+---> Client requests /foo/.
+
+---> Server responds with some content with an ETag of "abcd1234".
+
+---> Client sends an HTTP PUT request to /foo/ to update the resource. It also sends an If-Match: "abcd1234" header to specify the version it is trying to update.
+
+---> Server checks to see if the resource has changed, by computing the ETag the same way it does for a GET request (using the same function). If the resource has 
+     changed, it will return a 412 status code, meaning “precondition failed”.
+
+---> Client sends a GET request to /foo/, after receiving a 412 response, to retrieve an updated version of the content before updating it.
+
+
+
+
+-------------------------------
+3. GZip compression decorators
+-------------------------------
+The decorators in django.views.decorators.gzip control content compression on a per-view basis.
+
+3.1 gzip_page
+--------------
+This decorator compresses content if the browser allows gzip compression.
+
+It sets the Vary header accordingly, so that caches will base their storage on the Accept-Encoding header.
+
+
+Example:
+---------
+Requesting this url "http://127.0.0.1:8000/bookstore/books/" will load all the books from the database using the view function. Below is the view function used
+
+
+@require_GET
+def listbooks(request):
+    QuerySet = Book.objects.all()
+    
+    return render(request, 'booklist.html', {'data':QuerySet})
+
+
+this view will only accepts the Http GET request method.
+
+
+[22/May/2020 16:22:00] "GET /bookstore/books/ HTTP/1.1" 200 3998    # 3998 is the response size
+
+
+Now apply gzip_page decorator on the view
+
+
+from django.views.decorators.gzip import gzip_page
+
+@require_GET
+@gzip_page
+def listbooks(request):
+    QuerySet = Book.objects.all()
+    
+    return render(request, 'booklist.html', {'data':QuerySet})
+
+
+[22/May/2020 16:25:22] "GET /bookstore/books/ HTTP/1.1" 200 880    # 880 is the response size
+
+
+
+---------------------------
+4. Vary headers decorators
+---------------------------
+The decorators in django.views.decorators.vary can be used to control caching based on specific request headers.
+
+
+Using Vary headers
+-------------------
+The Vary header defines which request headers a cache mechanism should take into account when building its cache key. 
+
+For example, if the contents of a Web page depend on a user’s language preference, the page is said to “vary on language.”
+
+
+
+By default, Django’s cache system creates its cache keys using the requested fully-qualified URL.
+
+Ex:
+----
+"https://www.example.com/stories/2005/?order_by=author". This means every request to that URL will use the same cached version, regardless of user-agent differences 
+such as cookies or language preferences.
+
+
+	However, if this page produces different content based on some difference in request headers – such as a cookie, or a language, or a user-agent – you’ll 
+need to use the Vary header to tell caching mechanisms that the page output depends on those things.
+
+To do this in Django, use the convenient django.views.decorators.vary.vary_on_headers() view decorator.
+
+
+4.1 vary_on_headers()
+----------------------
+
+Example:
+---------
+
+from django.views.decorators.vary import vary_on_headers
+
+
+@vary_on_headers('User-Agent')
+def my_view(request):
+    pass
+
+
+In this case, a caching mechanism (such as Django’s own cache middleware) will cache a separate version of the page for each unique user-agent.
+
+The advantage to using the vary_on_headers decorator rather than manually setting the Vary header (using something like response['Vary'] = 'user-agent') is that the 
+decorator adds to the Vary header (which may already exist), rather than setting it from scratch and potentially overriding anything that was already in there.
+
+
+You can pass multiple headers to vary_on_headers(). 
+
+The headers you pass to vary_on_headers are not case sensitive; "User-Agent" is the same thing as "user-agent"
+
+
+from django.views.decorators.vary import vary_on_headers
+
+@vary_on_headers('user-agent', 'Cookie')
+def my_view(request):
+    pass
+
+
+This tells downstream caches to vary on both, which means each combination of user-agent and cookie will get its own cache value. For example, a request with the 
+user-agent Mozilla and the cookie value foo=bar will be considered different from a request with the user-agent Mozilla and the cookie value foo=ham.
+
+
+
+4.2 vary_on_cookie
+--------------------
+
+we can directely use "vary_on_cookie" decorator instead of passing cookie to vary_on_headers
+
+
+@vary_on_header('cookie')
+def my_view(request):
+    pass
+
+
+from django.views.decorators.vary import vary_on_cookie
+
+@vary_on_cookie
+def my_view(request):
+    pass
+
+
+
+
+
+----------------------
+5. Caching decorators
+----------------------
+The Caching decorators control server and client-side caching.
+
+
+Use of caching
+---------------
+A fundamental trade-off in dynamic Web sites is, well, they’re dynamic. Each time a user requests a page, the Web server makes all sorts of calculations – from 
+database queries to template rendering to business logic – to create the page that your site’s visitor sees. This is a lot more expensive.
+
+So making all these caliculations every time user requests a resourse from server will increase the load on the server and causes delay in the response, as well the 
+traffic increases server can crash and unable to handle incomming requests.
+
+That’s where caching comes in.
+
+To cache something is to save the result of an expensive calculation so that you don’t have to perform the calculation next time.
+
+Django comes with a robust cache system that lets you save dynamic pages so they don’t have to be calculated for each request. For convenience, Django offers 
+different levels of cache granularity: You can cache the output of specific views, you can cache only the pieces that are difficult to produce, or you can cache your
+entire site.
+
+Django also works well with “upstream” caches, such as Squid (http://www.squid-cache.org/) and browser-based caches. These are the types of caches that you don’t 
+directly control but to which you can provide hints (via HTTP headers) about which parts of your site should be cached, and how with help of "vary_on_header" decorator
+
+
+
+Setting Up the Cache
+---------------------
+The cache system requires a small amount of setup. Namely, you have to tell it where your cached data should live – whether in a database, on the filesystem or 
+directly in memory. This is an important decision that affects your cache’s performance; Because, some cache types are faster than others.
+
+
+Your cache preference goes in the CACHE_BACKEND setting in your settings file.
+
+will see more about caching in a separate section, as of now we look into cache decorators.
+
+
+Refer to this link for More detail info "https://django-book.readthedocs.io/en/latest/chapter15.html"
+
+
+5.1 cache_control(**kwargs)
+----------------------------
+This decorator patches the response’s Cache-Control header by adding all of the keyword arguments to it.
+
+This decorator takes care of sending out the appropriate HTTP Response headers behind the scenes.
+
+This decorator will add the Cache-Control header in the Response headers.
+
+
+Proof:
+-------
+Requesting this url "http://127.0.0.1:8000/bookstore/" will call the home view.
+
+
+home view without cache_control
+
+@require_http_methods(['GET','POST'])
+def home(request):
+    return render(request, 'base.html')
+
+Response Headres:
+------------------
+Content-Length: 1354
+Content-Type: text/html; charset=utf-8
+Date: Sat, 23 May 2020 06:32:38 GMT
+Server: WSGIServer/0.2 CPython/3.6.5
+X-Frame-Options: SAMEORIGIN
+
+
+home view with cache_control
+
+@require_http_methods(['GET','POST'])
+@cache_control()
+def home(request):
+    return render(request, 'base.html')
+
+
+Response Headres:
+------------------
+Cache-Control: 
+Content-Length: 1354
+Content-Type: text/html; charset=utf-8
+Date: Sat, 23 May 2020 06:34:25 GMT
+Server: WSGIServer/0.2 CPython/3.6.5
+X-Frame-Options: SAMEORIGIN
+
+
+There are a few other ways to control cache parameters. For example, HTTP allows applications to do the following:
+
+	1. Define the maximum time a page should be cached.
+
+	2. Specify whether a cache should always check for newer versions, only delivering the cached content when there are no changes. 
+	   (Some caches might deliver cached content even if the server page changed, simply because the cache copy isn’t yet expired.)
+
+
+
+Ex:
+----
+from django.views.decorators.cache import cache_control
+
+@require_http_methods(['GET','POST'])
+@cache_control(must_revalidate = True, max_age = 60 * 10)     # 60 sec * 10 min = 600 sec
+def home(request):
+    return render(request, 'base.html')
+
+
+In this example, cache_control tells to revalidate the cache on every access and to store cached versions for, at most, 600 seconds(i.e, 10 min).
+
+
+Response Headres:
+------------------
+Cache-Control: must-revalidate, max-age=600
+Content-Length: 1354
+Content-Type: text/html; charset=utf-8
+Date: Sat, 23 May 2020 06:36:13 GMT
+Server: WSGIServer/0.2 CPython/3.6.5
+X-Frame-Options: SAMEORIGIN
+
+
+
+
+
+***Note:
+---------
+
+If we implimented cache on a view with max_age = 10 min, when we requested that view for the 1st time the HttpResponse returned from that view will be cached.
+if we requested the same view 2nd time it will not hit the server, instead of it will load the response from cache. This will happen until max_age time is expired.
+if we made a request after max_age time is expired then it will hit the server and load the latest response(if any changes made from last request) and cached it for
+next 10 min.
+
+
+
+
+5.2 never_cache()
+------------------
+This decorator adds a Cache-Control: max-age=0, no-cache, no-store, must-revalidate, private header to a response to indicate that a page should never be cached.
+
+Ex:
+----
+path('publishers/<pubname>/', views.publishername, name='publishers-name')
+
+The above path will match the url like "http://127.0.0.1:8000/bookstore/publishers/Dileep%20publications/"  and goes to the publishername view and list all the books
+published by that publisher.
+
+
+@never_cache
+def publishername(request, pubname):
+    
+    print('=========================Publisher name===============================')
+    print(pubname)
+    print('===========================END===================================')
+    
+    QuerySet = Publisher.objects.get(name = pubname).book_set.all()
+    
+    return render(request, 'booklist.html', {'data':QuerySet})
+
+
+
+Response Headers
+-----------------
+Cache-Control: max-age=0, no-cache, no-store, must-revalidate
+Content-Length: 2406
+Content-Type: text/html; charset=utf-8
+Date: Sat, 23 May 2020 08:13:57 GMT
+Expires: Sat, 23 May 2020 08:13:57 GMT
+Server: WSGIServer/0.2 CPython/3.6.5
+X-Frame-Options: SAMEORIGIN

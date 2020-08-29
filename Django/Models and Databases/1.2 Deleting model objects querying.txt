@@ -1,0 +1,49 @@
+==========================================================================================================================
+Deleting objects
+==========================================================================================================================
+>>> Entry.objects.filter(headline__iexact='Dummy')
+<QuerySet [<Entry: dummy>]>
+
+>>> e = Entry.objects.filter(headline__iexact='Dummy')
+>>> e
+<QuerySet [<Entry: dummy>]>
+
+>>> e.delete()
+(2, {'Practice.Entry_authors': 1, 'Practice.Entry': 1})
+
+>>> Entry.objects.filter(headline__iexact='Dummy')
+<QuerySet []>
+
+
+You can also delete objects in bulk. Every QuerySet has a delete() method, which deletes all members of that QuerySet.
+
+>>> Entry.objects.filter(pub_date__month=6)
+<QuerySet [<Entry: temp>, <Entry: temp1>]>
+
+
+>>> Entry.objects.filter(pub_date__month=6).delete()
+(4, {'Practice.Entry_authors': 2, 'Practice.Entry': 2})
+
+
+>>> Entry.objects.filter(pub_date__month=6)
+<QuerySet []>
+
+
+>>> Entry.objects.filter(Q(headline__istartswith='dumm') & Q(pub_date=date(2020, 5, 11)))
+<QuerySet [<Entry: dummy1>]>
+
+>>> Entry.objects.filter(Q(headline__istartswith='dumm') & Q(pub_date=date(2020, 5, 11))).delete()
+(2, {'Practice.Entry_authors': 1, 'Practice.Entry': 1})
+
+
+>>> Entry.objects.filter(Q(headline__istartswith='dumm') & Q(pub_date=date(2020, 5, 11)))
+<QuerySet []>
+
+
+Note:
+=====
+delete() is the only QuerySet method that is not exposed on a Manager itself. This is a safety mechanism to prevent you from accidentally requesting 
+Entry.objects.delete(), and deleting all the entries. 
+If you do want to delete all the objects, then you have to explicitly request a complete query set:
+
+	Entry.objects.all().delete()

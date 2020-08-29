@@ -1,0 +1,322 @@
+=======================================================================================================================================================================
+								Performing raw SQL queries
+=======================================================================================================================================================================
+Django gives you two ways of performing raw SQL queries.
+
+1. Use Manager.raw() to perform raw queries
+2. Execute custom SQL directly.
+
+
+NOTE:
+------
+You should be very careful whenever you write raw SQL. Every time you use it, you should properly escape any parameters that the user can control by using params 
+in order to protect against SQL injection attacks.
+
+
+
+1. Using raw() method:
+-------------------------
+raw(raw_query, params=None, translations=None)
+
+This method takes a raw SQL query, executes it, and returns a django.db.models.query.RawQuerySet instance. This RawQuerySet instance can be iterated over like a 
+normal QuerySet to provide object instances.
+
+
+Example:
+----------
+
+>>> Rq = Book.objects.raw('select * from book_detail')
+
+>>> Rq
+<RawQuerySet: select * from book_detail>
+
+>>> for b in Rq:
+...     print(b)
+...
+
+Data visualization
+Pandas Hand book
+Django hand book
+Web scraping with python
+Angular hand book
+Java for Android
+Kotlin for Android
+
+
+
+Warning
+----------
+
+No checking is done on the SQL statement that is passed in to .raw(). Django expects that the statement will return a set of rows from the database, but does 
+nothing to enforce that. If the query does not return rows, a (possibly cryptic) error will result.
+
+Warning
+---------
+
+If you are performing queries on MySQL, note that MySQL’s silent type coercion may cause unexpected results when mixing types. If you query on a string type column,
+but with an integer value, MySQL will coerce the types of all values in the table to an integer before performing the comparison. For example, if your table contains 
+the values 'abc', 'def' and you query for WHERE mycolumn=0, both rows will match. To prevent this, perform the correct typecasting before using the value in a query.
+
+
+-------------------------------------
+Mapping query fields to model fields
+-------------------------------------
+
+raw() automatically maps fields in the query to fields on the model.
+
+The order of fields in your query doesn’t matter.
+
+>>> Book.objects.raw('select id, name, price, rating from book_detail')
+
+<RawQuerySet: select id, name, price, rating from book_detail>
+
+
+>>> Book.objects.raw('select rating, name, price, id from book_detail')          # fields order doesn't matter
+
+<RawQuerySet: select rating, name, price, id from book_detail>
+
+
+
+---> Matching is done by name. This means that you can use SQL’s AS clauses to map fields in the query to model fields. So if you had some other table that had Person 
+     data in it, you could easily map it into Person instances.
+
+
+>>> data = Book.objects.raw('select id, name as bookname, price as bookprice, rating as bookrating from book_detail')
+
+>>> data
+<RawQuerySet: select id, name as bookname, price as bookprice, rating as bookrating from book_detail>
+
+>>> for rec in data:
+...     print(rec.bookrating)
+...
+4.5
+4.3
+4.0
+4.0
+4.3
+4.5
+4.5
+
+
+---> Alternatively, you can map fields in the query to model fields using the translations argument to raw().
+
+
+>>> dit = {'name':'bookname', 'price':'bookprice', 'rating':'bookrating'}
+
+>>> data = Book.objects.raw('select *from book_detail', translations=dit)
+
+>>> data
+<RawQuerySet: select *from book_detail>
+
+>>> for rec in data:
+...     print(rec.bookprice)
+...
+300
+250.5
+450
+200
+250.5
+300
+450
+
+
+
+NOTE:
+------
+Don't use alias name (AS clause) on primary key column.
+
+
+>>> data = Book.objects.raw('select rating as bookrating, name as bookname, price as bookprice, id as bookid from book_detail')  
+
+>>> for rec in data:
+...     print(bookid)
+
+
+EROOR: django.db.models.query_utils.InvalidQuery: Raw query must include the primary key
+
+
+
+--------------
+Index lookups
+--------------
+
+raw() supports indexing, so if you need only the first result you can write
+
+>>> book1 = Book.objects.raw('select * from book_detail')[0]
+>>> book1
+<Book: Data visualization>
+
+>>> book2 = Book.objects.raw('select * from book_detail')[1]
+>>> book2
+<Book: Pandas Hand book>
+
+
+***If you have a large number of Book objects in your database, it is more efficient to limit the query at the SQL level. Because retriving all objects for the sake
+one first object causes performance issue***
+
+
+>>> book1 = Book.objects.raw('select * from book_detail LIMIT 1')[0]
+>>>
+>>> book1
+<Book: Data visualization>
+
+
+>>> book2 = Book.objects.raw('select * from book_detail LIMIT 1')[1]
+
+IndexError: list index out of range
+
+
+=======================
+Deferring model fields
+=======================
+
+pass
+
+
+
+
+
+===================
+Adding annotations
+===================
+
+pass
+
+
+
+==============================
+Passing parameters into raw()
+==============================
+
+If you need to perform parameterized queries, you can use the params argument to raw().
+
+
+>>> bookname = 'Django hand book'
+>>>
+>>> data = Book.objects.raw('select * from book_detail WHERE name = %s', [bookname])
+>>>
+>>> for rec in data:
+...     print(rec)
+...
+Django hand book
+
+
+
+>>> bookrating = 4.5
+>>>
+>>> data = Book.objects.raw('select * from book_detail WHERE rating = %s', [bookrating])
+>>>
+>>> data
+<RawQuerySet: select * from book_detail WHERE rating = 4.5>
+>>>
+>>> for rec in data:
+...     print(rec)
+...
+Data visualization
+Java for Android
+Kotlin for Android
+
+
+
+
+
+
+
+==============================
+Executing custom SQL directly
+==============================
+
+The object django.db.connection represents the default database connection. To use the database connection, call connection.cursor() to get a cursor object. 
+Then, call cursor.execute(sql, [params]) to execute the SQL and cursor.fetchone() or cursor.fetchall() to return the resulting rows.
+
+
+Example:
+---------
+
+from django.db import connection
+
+def my_custom_sql(self):
+    with connection.cursor() as cursor:
+        cursor.execute("UPDATE bar SET foo = 1 WHERE baz = %s", [self.baz])
+        cursor.execute("SELECT foo FROM bar WHERE baz = %s", [self.baz])
+        row = cursor.fetchone()
+
+    return row
+
+
+
+NOTE:
+------
+
+To protect against SQL injection, you must not include quotes around the %s placeholders in the SQL string.
+
+
+
+
+NOTE:
+------
+
+If you are using more than one database, you can use django.db.connections to obtain the connection (and cursor) for a specific database. 
+django.db.connections is a dictionary-like object that allows you to retrieve a specific connection using its alias.
+
+
+from django.db import connections
+with connections['my_db_alias'].cursor() as cursor:
+    # Your code here...
+
+
+
+NOTE:
+------
+By default, the Python DB API will return results without their field names, which means you end up with a list of values, rather than a dict. At a small performance 
+and memory cost, you can return results as a dict by using something like this:
+
+
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict"
+    columns = [col[0] for col in cursor.description]
+    return [
+        dict(zip(columns, row))
+        for row in cursor.fetchall()
+    ]
+
+
+
+
+
+
+
+==========================
+Calling stored procedures
+==========================
+
+CursorWrapper.callproc(procname, params=None, kparams=None)
+
+
+Calls a database stored procedure with the given name. A sequence (params) or dictionary (kparams) of input parameters may be provided. Most databases don’t support 
+kparams. Of Django’s built-in backends, only Oracle supports it.
+
+
+For example, given this stored procedure in an Oracle database:
+
+============================Oracle procedure============================
+CREATE PROCEDURE "TEST_PROCEDURE"(v_i INTEGER, v_text NVARCHAR2(10)) AS
+    p_i INTEGER;
+    p_text NVARCHAR2(10);
+BEGIN
+    p_i := v_i;
+    p_text := v_text;
+    ...
+END;
+========================================================================
+
+
+This will call it:
+------------------
+
+with connection.cursor() as cursor:
+    cursor.callproc('test_procedure', [1, 'test'])
+
+
+
+

@@ -1,0 +1,432 @@
+=======================================================================================================================================================================
+									URL dispatcher
+=======================================================================================================================================================================
+
+To design URLs for an app, you create a Python module informally called a URLconf (URL configuration). This module is pure Python code and is a mapping between 
+URL path expressions to Python functions (your views).
+
+Django also provides a way to translate URLs according to the active language. 
+
+
+
+-------------------------------
+How Django processes a request
+-------------------------------
+
+When a user requests a page from your Django-powered site, this is the algorithm the system follows to determine which Python code to execute.
+
+1. Django determines the root URLconf module to use. Ordinarily, this is the value of the ROOT_URLCONF setting, But if the incoming HttpRequest object has a 
+urlconf attribute (set by middleware), its value will be used in place of the ROOT_URLCONF setting.
+
+2. Django loads that Python module and looks for the variable urlpatterns. This should be a sequence of django.urls.path() and/or django.urls.re_path() instances.
+
+3. Django runs through each URL pattern, in order, and stops at the first one that matches the requested URL, matching against path_info.
+
+4. Once one of the URL patterns matches, Django imports and calls the given view, which is a Python function (or a class-based view). The view gets passed the 
+following arguments.
+
+	---> An instance of HttpRequest.
+	
+	---> If the matched URL pattern contained no named groups, then the matches from the regular expression are provided as positional arguments.
+
+	---> The keyword arguments are made up of any named parts matched by the path expression that are provided, overridden by any arguments specified in the 
+	     optional kwargs argument to django.urls.path() or django.urls.re_path().
+
+5. If no URL pattern matches, or if an exception is raised during any point in this process, Django invokes an appropriate error-handling view.
+
+
+
+Example:
+---------
+
+from django.urls import path, re_path
+from . import views
+
+
+urlpatterns = [
+    path('books/', views.listbooks),
+    path('books/<int:year>/<int:month>/<int:date>', views.filterbooks)
+]
+
+
+In the above 2 url patterns 
+
+---> 1st patteren is used to give all the books in the database
+---> 2nd patteren is used to give the books of specified year, month and date
+
+
+NOTE:
+------
+1. To capture a value from the URL, use angle brackets.  (i.e, <year> to capture year prameter from URL).
+
+2. Captured values can optionally include a converter type. For example, use <int:month> to capture an integer parameter called month.
+
+	* String(str) is the default type of every parameter.
+	
+	* But, we can specify the type of parameter like in the above example. these are called as 'Path converters'.
+
+
+----------------
+Path converters
+----------------
+
+These path converters are available by default.
+
+	* str - Matches any non-empty string, excluding the path separator ('/'). This is the default converter if a converter isn’t included in the expression.
+
+	* int - Matches zero or any positive integer. Returns an int.
+
+	* uuid - Matches a formatted UUID. For example "075194d3-6885-417e-a8a8-6c931e272f00". Returns a UUID instance.
+
+	* slug - Matches any slug string consisting of ASCII letters or numbers, plus the hyphen and underscore characters. 
+	         For example, building-your-1st-django-site.
+		
+	* path - Matches any non-empty string, including the path separator, '/'. This allows you to match against a complete URL path rather than a segment 
+		 of a URL path as with str.
+
+
+
+
+-----------------------------------
+Registering custom path converters
+-----------------------------------
+pass for now
+
+
+
+
+
+--------------------------
+Using regular expressions
+--------------------------
+
+If the paths and converters syntax isn’t sufficient for defining your URL patterns, you can also use regular expressions. To do so, use re_path() instead of path().
+
+--------------------------------
+Named regular expression groups
+--------------------------------
+
+In Python regular expressions, the syntax for named regular expression groups is (?P<name>pattern).
+
+where name is the name of the group and pattern is some pattern to match.
+
+
+urlpatterns = [
+    path('books/', views.listbooks),
+    path('books/<int:year>/<int:month>/<int:date>', views.filterbooks),
+    path('books/<slug:anything>', views.slugview),
+
+    re_path('^books/(?P<year>[0-9]{4})/(?P<rat>[0-9]{1}[.][0-9]{1})/$', views.ratingbooks)
+]
+
+
+In the above list of urlpatterns observe the last pattern, it will give us all the books with specified year and rating.
+
+(?P<year>[0-9]{4})  ---> named regular expression group1 which captures the year from the url and assigned to the group name(i.e, year) defined in angle brackets.
+
+
+(?P<rat>[0-9]{1}[.][0-9]{1}) ---> named regular expression group2 which captures the rating from the url and assigned to the group name(rat) defined in angel brackets.
+
+
+***Each captured argument is sent to the view as a string, regardless of what sort of match the regular expression makes.***
+
+***NOTE:
+------
+When switching from using path() to re_path() or vice versa, it’s particularly important to be aware that the type of the view arguments may change, and so you may 
+need to adapt your views.
+
+Ex:
+---
+
+path('books/<int:year>/<int:month>/<int:date>', views.filterbooks),
+
+re_path(r'^books/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/(?P<date>[0-9]{2})/$', views.filterbooks),   # an integer is required (got type str)
+    
+
+
+----------------------------------
+Unnamed regular expression groups
+----------------------------------
+
+As well as the named group syntax, e.g. (?P<year>[0-9]{4}), you can also use the shorter unnamed group, e.g. ([0-9]{4}).
+
+This usage isn’t particularly recommended as it makes it easier to accidentally introduce errors between the intended meaning of a match and the arguments of the view.
+
+
+
+-----------------
+Nested arguments
+-----------------
+
+Regular expressions allow nested arguments, and Django will resolve them and pass them to the view.
+
+re_path(r'^books/(book-(\d+)/)?$', views.idbook)                     # Bad implimentation of nesting arguments in regex urls
+
+re_path(r'^books/(?:book-(?P<bookid>\d+)/)?$', views.idbook)	     # Good implimentation of nesting arguments
+
+
+NOTE:
+------
+In the 1st url patteren there are two arguments "book-" (outer argument) and book no "(\d+)" (nested argument). Both arguments are captured.
+
+Ex:
+----
+http://127.0.0.1:8000/bookstore/books/book-3/   this url triggers the idbook view in the views.py file 
+
+def idbook(request, x, y):
+    return HttpResponse('X is: '+x+' and Y is: '+y)
+    
+
+output:
+--------
+X is: book-3/ and Y is: 3
+
+
+
+In the 2nd url patteren there are two arguments "?:book-" (outer argument) and bookid "(?P<bookid>\d+)/" (nested argument). 
+
+in this case the outer argument is non-capturing argument (?:book).
+
+: (colon) --->  indicates it's a non-capturing argument
+
+P         --->  indicates capturing argument
+
+
+Ex:
+----
+http://127.0.0.1:8000/bookstore/books/book-3/     this url triggers the modified idbook view in the views.py file
+
+def idbook(request, bookid):
+    return HttpResponse('Book id is: '+bookid)
+
+output:
+--------
+Book id is: 3
+
+
+***NOTE:
+---------
+
+As a rule of thumb, only capture the values which the view needs to work with and use non-capturing arguments when the regular expression needs an argument but the 
+view ignores it.
+
+
+
+
+
+---------------
+Error handling
+---------------
+pass now
+
+
+
+
+
+
+---------------------------
+Reverse resolution of URLs
+---------------------------
+Django provides tools for performing URL reversing that match the different layers where URLs are needed:
+
+---> In templates: Using the url template tag.
+---> In Python code: Using the reverse() function.
+---> In higher level code related to handling of URLs of Django model instances: The get_absolute_url() method.
+
+
+
+------------------------------------------
+In templates: Using the url template tag.
+------------------------------------------
+
+path('books/', views.listbooks, name='books-list'),
+path('books/<bookname>/', views.bookname, name='books-name'), 
+
+
+
+on calling the 1st url i am loading all the books from the database and displaying in the table like bookname, price and rating
+
+Book Name	        Price	Rating
+=======================================
+Angular hand book	250.50	4.3
+Data visualization	300.00	4.5
+Django hand book	450.00	4.0
+
+when we click on a perticular book name i want to trigger the 2nd url pattren and load the appropriate view and display the details of that book. to do this i need to 
+reverse the url of 2nd pattren on each book name in the 1st pattren html document using URL template tag.
+
+
+def listbooks(request):
+    QuerySet = Book.objects.all()
+    
+    return render(request, 'booklist.html', {'data':QuerySet})
+
+
+booklist the template loading with respect to 1st url and displaying the books list table.
+
+
+booklist.html
+--------------
+<div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Book Name</th>
+                    <th>Price</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in data %}
+                <tr>
+                    <td><a href="{% url 'books-name' book.name %}">{{ book.name }}</a></td>      # url reversing using URL template tag
+                    <td>{{ book.price }}</td>
+                    <td>{{ book.rating }}</td>
+                </tr>
+
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+NOTE:
+------
+in this approach we have a problem, in future, if we change the url pattren name FROM books-name TO something else in the app level urls.py file then we need to update 
+that in all html files manually.
+
+
+
+
+
+-----------------------------------------------------------------------------------------------------------
+In higher level code related to handling of URLs of Django model instances: The get_absolute_url() method.
+-----------------------------------------------------------------------------------------------------------
+
+To overcome above limitaion Define a "get_absolute_url()" method in every model class, this method tells Django how to calculate the canonical URL for an object.
+
+
+Example:
+---------
+path('books/<bookname>/', views.bookname, name='books-name'),    # named URL pattern
+
+
+in models.py Book model class
+
+
+class Book(models.Model):
+    author = models.ManyToManyField(Author)
+    publisher = models.ForeignKey(Publisher, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50, blank=False, null=False)
+    pages = models.IntegerField()
+    price = models.DecimalField(max_digits=30, decimal_places=2)
+    rating = models.FloatField()
+    pubdate = models.DateField()
+    
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = 'Book'
+        db_table = 'book_detail'
+        
+    def __str__(self):
+        return self.name
+    
+    def get_absolute_url(self):
+        return reverse('books-name', kwargs={"bookname":self.name})    # key name should be same as in the url argument.
+    
+
+in HTML file
+
+<table class="table">
+            <thead>
+                <tr>
+                    <th>Book Name</th>
+                    <th>Price</th>
+                    <th>Rating</th>
+                    <th>Pages</th>
+                    <th>Published date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in data %}
+                <tr>
+                    <td><a href="{{ book.get_absolute_url }}">{{ book.name }}</a></td>     # This will gives the reverse url pattern to match above defined URL
+                    <td>{{ book.price }}</td>
+                    <td>{{ book.rating }}</td>
+                    <td>{{ book.pages }}</td>
+                    <td>{{ book.pubdate }}</td>
+                </tr>
+
+                {% endfor %}
+            </tbody>
+</table>
+
+
+
+The logic here is that if you change the URL structure of your objects, even for something small like correcting a spelling error, you don’t want to have to track 
+down every place that the URL might be created. Specify it once, in get_absolute_url() and have all your other code call that one place.
+
+
+NOTE:
+------
+The string you return from get_absolute_url() must contain only ASCII characters (required by the URI specification, RFC 2396#section-2) and be URL-encoded, 
+if necessary.
+
+Code and templates calling get_absolute_url() should be able to use the result directly without any further processing. You may wish to use the 
+django.utils.encoding.iri_to_uri() function to help with this if you are using strings containing characters outside the ASCII range.
+
+
+
+
+----------------------------------------------
+In Python code: Using the reverse() function.
+----------------------------------------------
+
+path('books/', views.listbooks, name='books-list'),
+path('books/<bookname>/', views.bookname, name='books-name'), 
+
+
+on requesting the 1st url i am loading all the books in the database.
+on requesting the 2nd url i am loading a specified book details from the database, if the specified book is not there, i want to redirect to the 1st url and display 
+all books in the database.
+
+
+from django.http import HttpResponse, HttpResponseRedirect
+from django.url 
+
+def bookname(request, bookname):
+    
+    QuerySet = Book.objects.filter(name = bookname)
+    
+    if QuerySet:
+        return HttpResponse(QuerySet)
+        
+    else:
+        return HttpResponseRedirect(reverse('books-list', args=None))
+
+
+Requesting this url "http://127.0.0.1:8000/bookstore/books/avengers/" will go to bookname view and in this view it will filter the Books in the database with specified
+book name if mactches if condition will be executed, but we dont have the book with name 'avengers' in our DB so, else will be executed and redirected to 'books-list'.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

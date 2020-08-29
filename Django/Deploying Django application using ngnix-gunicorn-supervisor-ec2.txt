@@ -1,0 +1,602 @@
+=======================================================================================================================================================================
+						Deploying Django application using nginx,gunicorn, supervisor and ec2
+=======================================================================================================================================================================
+
+Creating AWS Account
+---------------------
+
+First we need to create a AWS account
+
+for creating AWS account go to this link "https://aws.amazon.com/console/" and click on Create an AWS Account
+
+AWS Accounts Include 12 Months of Free Tier Access Including use of Amazon EC2, Amazon S3, and Amazon DynamoDB
+
+For more details of free tier services Visit "https://aws.amazon.com/free/?all-free-tier.sort-by=item.additionalFields.SortRank&all-free-tier.sort-order=asc"
+
+After creating AWS Account login to the AWS console.
+
+
+
+Creating AWS EC2(Elastic Compute Cloud) Instance
+-------------------------------------------------
+Go to Services Menu
+
+Under Compute Category Select EC2
+
+Under Launch instance section Click on Launch Instance.
+
+Then Choose an Amazon Machine Image (AMI) i.e, operating system to install on EC2 instance
+
+Step 1: Choose an Amazon Machine Image (AMI)
+
+Select "Ubuntu Server 18.04 LTS (HVM), SSD Volume Type - ami-07c1207a9d40bc3bd (64-bit x86) / ami-0a5ee0336de62011b (64-bit Arm)" or Higer one And select "64-bit x86" Architecture
+
+Step 2: Choose an Instance Type
+
+Select t2.micro free tier eligible and click Next: Configure Instance Details
+
+Step 3: Configure Instance Details
+
+Don't do any changes as of now just leave it to default and click Next:Add Storage
+
+Step 4: Add Storage
+
+laeve to default settings and click Next:Add Tags
+
+Step 5: Add Tags
+
+don't do anything just click Next:Configure Security Group
+
+Step 6: Configure Security Group
+
+if we want we can change the security gruop name and description
+
+add rules which we want by click on Add Rule
+
+R1  ===>  Type = HTTP, Protocol = default(TCP), Portrange = default(80) Source = default(Custom/Anywhere) Description = nginx Rule
+
+R2  ===>  Type = default(Custom TCP Rule), Protocol = default(TCP), Portrange = any port u want, Source = default(Custom) Description = Application Rule
+
+
+Then Click Review And Launch
+
+Then we need to create a new key file
+
+select create a new key file 
+
+give the file name u want
+
+click download key
+
+Then Click Launch
+
+Then Click on the instance id to navigate to the Instance
+
+
+
+
+Connecting to EC2 instance using PuTTY
+----------------------------------------
+
+Now Download putty and install it
+
+after installing putty open puTTYgen 
+
+click load and navigate to the previously downloaded .pem file 
+
+then choose the appropriate "Type of key to generate" under Parameters section (SSH is recommended)
+
+then click Generate and move the cursor until key generation complete
+
+then click Save private key and save it in your computer
+
+
+Now open putty 
+
+copy the "IPv4 Public IP" address from aws console and enter in the Host Name(or ip address)in the putty
+
+Then in putty under category section go to connection -> SSH -> Auth  Browse the file which we generate using puttygen and clcik open
+
+Now it will ask for Login as: Enter ubuntu for ubuntu Amazon Machine Image (AMI).
+
+Then we successfully connected to our Instance
+
+
+
+Deploying Django Application
+-----------------------------
+
+Before deploying the application we need to check wether our app is ready of deploy
+
+Run this command "python manage.py check --deploy"
+
+This will verify the check list for deploy ready and gives the WARNINGS if we miss any settings.
+
+Then Keep '*' under ALLOWED_HOSTS = [] in the settings.py file to allow all hosts to the application.
+
+After these checks go to puTTY
+
+
+ubuntu@ip-172-31-16-29:~$ ls -l
+total 0
+
+
+$ sudo apt-get update
+
+$ sudo apt-get upgrade -y
+
+After update and upgrade 
+
+check python is installed and python version and where it is insatlled
+
+$ python3 --version
+Python 3.6.9
+
+$ which python3
+/usr/bin/python3
+
+install virtualenvironment
+
+$ sudo apt-get install python3-venv
+
+After installing venv create a folder to organize all virtualenvironments.
+
+$ mkdir VirEnv
+
+Change directory to VirEnv
+
+$ cd VirEnv
+
+Create a virtualenvironment for our application
+
+$ python3 -m venv Django2.0.7_Py3.6.9
+
+
+ubuntu@ip-172-31-16-29:~/VirEnv$ ls -l
+total 4
+drwxrwxr-x 6 ubuntu ubuntu 4096 Jun 13 11:21 Django2.0.7_Py3.6.9
+
+
+Change directory to virtualenvironment
+
+ubuntu@ip-172-31-16-29:~/VirEnv$ cd Django2.0.7_Py3.6.9/
+
+ubuntu@ip-172-31-16-29:~/VirEnv/Django2.0.7_Py3.6.9$
+
+
+Activate virtualenvironment
+
+ubuntu@ip-172-31-16-29:~/VirEnv/Django2.0.7_Py3.6.9$ source bin/activate
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~/VirEnv/Django2.0.7_Py3.6.9$
+
+
+Install Django AND other dependencies
+
+$ pip install django==2.0.7
+
+$ pip freeze
+Django==2.0.7
+pkg-resources==0.0.0
+pytz==2020.1
+
+$ pip install Pillow==7.1.2
+
+$ pip freeze
+Django==2.0.7
+Pillow==7.1.2
+pkg-resources==0.0.0
+pytz==2020.1
+
+
+Now clone the git peoject repository
+
+git clone https://github.com/Vissu-A/Web-Dev.git
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ ls -l
+total 8
+drwxrwxr-x 3 ubuntu ubuntu 4096 Jun 13 11:21 VirEnv
+drwxrwxr-x 4 ubuntu ubuntu 4096 Jun 13 12:09 Web-Dev
+
+
+
+we need some softwares to server our application from aws Ec2
+
+In local environment Django uses python's built-in http server to server the application but in case of deployment we need to use actual server Apache / nginx
+
+we use nginx for this
+
+Next we need a wsgi(web server gateway) interface to connect between nginx server and out application
+
+This is nothing but like unix socket. unix socket is a mechanism used to achive inter process communication b/w two applications. in our case nginx and Django App
+
+
+so we are going to use a wsgi interface which name is 'gunicorn'
+
+
+
+Insatlling nginx and Gunicorn
+
+gunicorn is a pip module
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ pip install gunicorn
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ sudo apt-get install -y nginx
+
+Then if you visit your Public DNS (IPv4) "http://ec2-52-14-57-170.us-east-2.compute.amazonaws.com/" on the browser you will see Welcome to nginx! message
+
+So, nginx is installed successfully
+
+NOTE:
+------
+If you are unable to see Welcome to nginx! message make sure that you are added HTTP rule in inbound rules of Security Group for the instance.
+
+
+
+Now we need to connect gunicorn(wsg interface) and nginx
+
+if you see in our Django project we have a file called wsgi.py
+
+we need to tell gunicorn use that wsgi.py file to server the user request which is comming through a web server (i.e, nginx)
+
+make sure to change the directory to where this project is then run this command
+
+$ gunicorn --bind 0.0.0.0:8000 Dlearning.wsgi:application
+
+open the browser and enter IPv4 Public IP:8000 "http://52.14.57.170:8000/" this will enter to your application.
+
+but your static files like css, images will not loaded we will deal this later
+
+if you get dissalowed host error then add instance IPv4 Public IP address to ALLOWED_HOST list in settings.py file
+
+
+NOTE:
+------
+if you stop the command or close the reminal then our application will be stoped or down. This is where supervisor comes in
+
+Supervisour make sure our application runs in the background always, when ever the server is restarted or shutdown and started again or something went wrong in these 
+cases supervisour make sure our application upon running.
+
+This means supervisour make sure gunicorn always running in background to process request from web server nginx
+
+
+
+Configure Supervisour
+----------------------
+
+installing Supervisour
+
+$ sudo apt-get install -y supervisor
+
+After installation success we need to create a configuration so supervisor read from that configuration
+
+Go to cd /etc/supervisor/conf.d/
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~/Web-Dev/Django2.0.7_Py3.6.5/Dlearning$ cd /etc/supervisor/conf.d/
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ ls -l
+total 0
+
+
+Nothing in the directory now create a new file
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo touch gunicorn.conf
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ ls -l
+total 0
+-rw-r--r-- 1 root root 0 Jun 13 14:29 gunicorn.conf
+
+ file created now edit it
+
+$ sudo nano gunicorn.conf
+
+[program:gunicorn]    # tell to run the specified program gunicorn
+directory=/home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning   # tells where is the above program 
+command=/home/ubuntu/VirEnv/Django2.0.7_Py3.6.9/bin/gunicorn --workers 3 --bind unix:/home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning/app.sock Dlearning.wsgi:application
+autostart=true  # to tell start on system start
+autorestart=true  # to tell if something goes wrong auto restart
+
+stderr_logfile=/var/log/gunicorn/gunicorn.err.log
+stdout_logfile=/var/log/gunicorn/gunicorn.out.log
+
+[group:guni]
+programs:gunicorn
+
+Now let supervisor read this file, this will tell cofigurations correct or not
+
+first create the directory
+
+$ sudo mkdir /var/log/gunicorn
+
+then run this command "$ sudo supervisorctl reread"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo supervisorctl reread
+guni: available
+
+
+Now let run supervisor in the background
+
+run this command " sudo supervisorctl update"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo supervisorctl update
+guni: added process group
+
+Check status "sudo supervisorctl status"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo supervisorctl status
+guni:gunicorn                    RUNNING   pid 29432, uptime 0:00:17
+
+Now gunicorn is running in backgroun
+
+
+Now cofigure nginx to read from this socket file
+
+go back to home dir "cd ~"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ cd ~
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$
+
+then go into ngnix setting "$ cd /etc/nginx/sites-available"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ cd /etc/nginx/sites-available
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$
+
+then
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ ls
+default
+
+then create new file "$ sudo touch django.conf"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ sudo touch django.conf
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ ls
+default  django.conf
+
+Now edit the file "$ sudo nano django.conf"
+
+enter these lines in the file
+
+server {
+        listen 80;
+        server_name 52.14.57.170;
+
+        location / {
+        include proxy_params;
+        proxy_pass http://unix:/home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning/app.sock;
+        }
+}
+
+
+then save the file and exit nano by pressing ctl+o give file name then enter and then ctl+x to exit.
+
+
+Now make nginx use this configuraions "$ sudo ln django.conf /etc/nginx/sites-enabled/"
+
+test the nginx "$ sudo nginx -t"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+
+Now restart nginx "$ sudo service nginx restart"
+
+Now Enter IPv4 Public IP "http://52.14.57.170/" in the browser and you can see the application
+
+
+Now serving static files
+
+why the static files are not loading because these static files should be server by nginx but nginx is unable to find them
+
+we need to configure in the nginx confiugrations file which we created above django.conf
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ cd /etc/nginx/sites-available/
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ ls -l
+total 8
+-rw-r--r-- 1 root root 2416 Apr  6  2018 default
+-rw-r--r-- 2 root root  190 Jun 13 15:58 django.conf
+
+
+lets open the file "$ sudo nano django.conf"
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ sudo nano django.conf
+
+
+add these lines 
+
+
+        location /static/ {
+        autoindex on;
+        alias /home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning/Bookstore/allstatic/;
+
+        }
+
+
+then save and Exit  (ctl+o and ctl+x)
+
+text nginx configurations
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+
+Then reload the nginx
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/nginx/sites-available$ sudo systemctl reload nginx
+
+Now static files are served
+
+
+NOTE:
+------
+
+Nick Ross
+11 months ago
+Hey  Shobi! I think you do a great job with your vids! I'm having a hard time with multiple apps that have their own static files folder. should I use 
+staticfiles_storage or staticfiles_root? the documentation or answers don't point to an answer. Thanks for any help!
+
+
+Shobi P P
+11 months ago (edited)
+Hey Nick. Actually, if you have multiple apps with multiple static locations, you will have to run collectstatic command, ie, python manage.py collectstatic , 
+then this command will go through all the folders which you have specified in the STATICFILES_DIRS in your settings.py and copy them over to the STATIC_ROOT you have 
+specified in the settings.py. You wont have to change STATICFILES_STORAGE since its an engine. Hope it helps, if not shoot an email to ppshobi@gmail.com we can try to
+debug the issue further 
+
+
+
+There is a problem with serving admin static files
+
+To solve this define 
+
+STATIC_ROOT = 'path' in settings.py file
+
+then run this command "python manage.py collectstatic"
+
+This will copy all files from your static folders into the STATIC_ROOT directory.
+
+then push the code to repo 
+
+then pull the latest code in ec2instance repo
+
+
+Then reload nginx "$ sudo systemctl reload nginx"
+
+
+
+
+
+--------------------------------------------------------
+Django celery mail sending up on user creation settings
+--------------------------------------------------------
+go to virtual environment
+
+install redis module " pip install redis "
+
+1. install redis server " sudo apt-get install redis-server " this redis server acts like messageing broker
+
+2. sudo nano /etc/redis/redis.conf
+
+Inside the file, find the supervised directive.
+The supervised directive is set to no by default. change this to systemd " supervised systemd "
+
+(or)
+
+$ sudo systemctl enable redis-server.service
+
+
+3. restart redis server " sudo systemctl restart redis.service "
+
+4. check redis server status "  sudo systemctl status redis " 
+
+5. To test that Redis is functioning correctly, connect to the server using the command-line client:
+
+	$ redis-cli
+	127.0.0.1:6379> ping
+	PONG
+
+
+6. change dir to  etc>supervisor>conf.d
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/var/log/celery$ cd /etc/supervisor/conf.d
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$
+
+
+7. created a conf file celery.conf " sudo touch celery.conf "
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo touch celery.conf
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ ls -l
+total 8
+-rw-r--r-- 1 root root 637 Jun 15 17:26 celery.conf
+-rw-r--r-- 1 root root 417 Jun 15 15:09 gunicorn.conf
+
+8. edit this conf file 
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo nano celery.conf
+
+paste this code in it
+*************code************
+[program:app-celery]
+command=/home/ubuntu/VirEnv/Django2.0.7_Py3.6.9//bin/celery -A Dlearning worker -l info
+directory=/home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning
+
+numprocs=1
+stdout_logfile=/var/log/celery/celery.out.log
+stderr_logfile=/var/log/celery/celery.err.log
+autostart=true
+autorestart=true
+startsecs=10
+
+; Need to wait for currently executing tasks to finish at shutdown.
+; Increase this if you have very long running tasks.
+stopwaitsecs = 600
+
+stopasgroup=true
+
+; Set Celery priority higher than default (999)
+; so, if rabbitmq is supervised, it will start first.
+priority=1000
+
+
+[group:celery]
+programs:app-celery
+**************************end**********************************
+
+save the file and exit nano editor
+
+9. create a directory " /var/log/celery "   by using command " $ sudo mkdir /var/log/celery "
+
+10. Now reread the supervisor " sudo supervisorctl reread "
+
+11. update supervisor " sudo supervisorctl update "
+
+12. check the status " sudo supervisorctl status " 
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo supervisorctl status
+celery:celery-email              RUNNING   pid 10367, uptime 0:00:22
+guni:gunicorn                    RUNNING   pid 10368, uptime 0:00:22
+
+That's all 
+
+If you are not reciving any mails upon user creation stop all supervisor services and start again
+
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo supervisorctl stop all
+guni:gunicorn: stopped
+celery:celery-email: stopped
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo supervisorctl start all
+guni:gunicorn: started
+celery:celery-email: started
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:/etc/supervisor/conf.d$ sudo supervisorctl status
+celery:celery-email              RUNNING   pid 10367, uptime 0:00:22
+guni:gunicorn                    RUNNING   pid 10368, uptime 0:00:22
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

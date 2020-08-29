@@ -1,0 +1,5 @@
+Backup data using fixtures in django
+
+python manage.py dumpdata --format=json > filename.json
+
+python manage.py loaddata totaldata.json

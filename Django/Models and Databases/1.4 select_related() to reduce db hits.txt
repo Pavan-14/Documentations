@@ -1,0 +1,47 @@
+=========================================================================================================================
+select_related()
+=========================================================================================================================
+Returns a QuerySet that will “follow” foreign-key relationships, selecting additional related-object data when it executes its query. This is a performance booster 
+which results in a single more complex query but means later use of foreign-key relationships won’t require database queries.
+
+
+
+# Hits the database.
+e = Entry.objects.get(id=5)
+
+# Hits the database again to get the related Blog object.
+b = e.blog
+
+
+# Hits the database.
+e = Entry.objects.select_related('blog').get(id=5)
+
+# Doesn't hit the database, because e.blog has been prepopulated
+# in the previous query.
+b = e.blog
+
+
+
+
+>>> q = Entry.objects.filter(blog__name__startswith='D')
+ 
+
+>>> for i in q:
+...     i.blog
+...
+<Blog: Django Tutorial>         # Hit the database again and get related blog name
+<Blog: Data visualization>	# Hit the database again and get related blog name		
+<Blog: Data visualization>	# Hit the database again and get related blog name
+<Blog: Data visualization>	# Hit the database again and get related blog name
+
+
+>>> q = Entry.objects.filter(blog__name__startswith='D').select_related('blog')  # get the related blog info at the same time to reduce the database hits when querying related blog info
+
+>>> for i in q:
+...     i.blog
+...
+<Blog: Django Tutorial>   	# Don't hit the database again
+<Blog: Data visualization>	# Don't hit the database again
+<Blog: Data visualization>	# Don't hit the database again
+<Blog: Data visualization>	# Don't hit the database again
+

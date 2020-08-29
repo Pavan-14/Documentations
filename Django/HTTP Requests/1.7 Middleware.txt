@@ -1,0 +1,91 @@
+=======================================================================================================================================================================
+										Middleware
+=======================================================================================================================================================================
+Middleware is a framework of hooks into Django’s request/response processing. 
+
+Middleware is used to process the Django's request and response. It’s a light, low-level “plugin” system for globally altering Django’s input or output.
+
+
+you can see list of middleware componenets in the settings.py file
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+These are the default middleware values created when we start a new project by using django-admin startproject command.
+
+
+Each component in the middleware is responsible for doing some specific function. For example, Django includes a middleware component, AuthenticationMiddleware, 
+that associates users with requests using sessions.
+
+
+
+----------------------------
+Writing your own middleware
+----------------------------
+pass for now
+
+
+
+
+
+
+----------------------
+Activating middleware
+----------------------
+
+To activate a middleware component, add it to the MIDDLEWARE list in your Django settings. 
+
+In MIDDLEWARE, each middleware component is represented by a string: the full Python path to the middleware factory’s class or function name.
+
+
+NOTE:
+------
+The order in MIDDLEWARE matters because a middleware can depend on other middleware. For instance, AuthenticationMiddleware stores the authenticated user in the 
+session; therefore, it must run after SessionMiddleware.
+
+
+
+
+------------------------------
+Middleware order and layering
+------------------------------
+
+During the request phase, before calling the view, Django applies middleware in the order it’s defined in MIDDLEWARE, top-down.
+
+You can think of it like an onion: each middleware class is a “layer” that wraps the view, which is in the core of the onion. If the request passes through all the 
+layers of the onion (each one calls get_response to pass the request in to the next layer), all the way to the view at the core, the response will then pass through 
+every layer (in reverse order) on the way back out.
+
+If one of the layers decides to short-circuit and return a response without ever calling its get_response, none of the layers of the onion inside that layer 
+(including the view) will see the request or the response. The response will only return through the same layers that the request passed in through.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
