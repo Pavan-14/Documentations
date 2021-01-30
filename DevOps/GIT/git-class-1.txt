@@ -1,0 +1,106 @@
+git --version
+git init
+git config user.name "vissu"
+git config user.email "email"
+
+git config --list
+git config --list | grep user (to get only user configuration)
+
+git status
+git status -s ==> shows status of each file. added to staging or not.
+git add file name
+git add .
+git commit -m "message"
+
+DELETE
+-------
+git rm "file name"
+ls -l
+git status
+deleted: file name
+git commit -m "delete message"
+
+
+git log --list ==> gives all chnages made and who made the changes.
+git log --oneline
+git log --oneline | head -n 2 ==> gives two commits from top
+git log --oneline | tail -n 2 ==> gives two commits from bottom
+
+Note: git will never track empty directory/folder.
+
+
+create a directory/folder
+mkdir temp
+cd temp
+create a file in temp directory
+touch "file1.txt"
+Now i don't want git to track this temp folder. it should ignore this directory
+
+cd ..
+touch .gitignore
+echo "build/*" >> .gitignore
+
+git status
+git add .
+git commit -m "message"
+
+*.txt add this to .gitignore to ignore all text files
+git status
+git add .
+git commmit -m "message"
+
+
+".git" hidden folder
+HEAD ==> reference to cureent branch.gives which branch we are working currently.
+config ==> all configurations are store in config (cat config)
+description ==> used by git web front end
+hooks/ ==> default script by git for automation
+index/ ==> keep track of files in staging area/index area.
+objects/ ==> all commits are created in this directory. it will create separate directory for each commit using first 2 digits of commit id
+
+
+Branching
+---------
+branch is just a pointer, it wont take any storage.
+we can see the pointer in this location ".git/refs/heads/main" of local repo
+> cat .git/refs/heads/main ==> to know current head point
+
+git ls-files -s ==> shows files in staging area
+
+git clean -f -d ==> removes files which are untracked
+
+git branch dev_branch ==> creates a new branch as "dev_branch"
+
+git checkout dev_branch ==> switch the head point to this branch from master branch.
+
+in order to merge the branch to other/master branch, first i need to chekout to the other/master branch.
+git checkout master
+git merge dev_branch
+
+
+conflicts
+---------
+git branch dev2
+
+git checkout dev2
+
+add some files to branch
+
+now other develpoer added some changes in the brach from which branch we made the branch "dev2"
+
+git checkout main/master
+
+git merge dev_branch
+
+git chekout dev2
+
+git merge dev_branch
+
+no conflict arrives, then open file and sit together and made changes.
+then add , commit then merge again.
+
+git merge --aboart ==> to remove/stop the merge
+
+
+
+

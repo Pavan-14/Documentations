@@ -1,0 +1,27 @@
+Jenkins
+-------
+will create a webhook in git to trigger jenkins when code is pushed.
+
+installing and setingup jenkins
+-------------------------------
+1. Launch EC2 Instance.
+2. install java. (jenkins require java to work)
+3. add the jenkins repo.
+4. install jenkins
+5. check status (systemctl status jenkins)
+6. start status (systemctl start jenkin)
+7. access jenkins on port 8080 in browser.
+8. enter password from the given location
+9. install suggested pluings
+10. create a admin user
+11. new item ==> to create a job
+12. people ==> who have access
+13. manage jenkins --> configure jenkins
+14. Home directory ==> "var/lib/jenkins/"
+15. system messgae ==> message to show when system is down.
+16. # of executor ==> 2(default)
+17. quite period ==> wait time between jobs
+18. manage jenkins ==> global tool config ==> 
+19. manage jenkins ==> plugin manager
+20. manage jenkins ==> manage users
+

@@ -1,0 +1,46 @@
+jenkins git hub job to get code from repo
+-----------------------------------------
+1. polling
+2. webhook
+
+polling
+-------
+configure cron job in jenkins to check repo
+for every period of time.
+
+webhook
+-------
+create a webhook in git repo, when code is pushed
+jenkins job starts and pull the code from repo
+
+polling waste server resources by checking all 
+the time for changes in repo code. we don't know
+when developers push the latest changes.
+
+>New job
+|
+>git hub project
+|
+>project url
+|
+>copy and paste repo url
+|
+>Source management code > git
+|
+>copy repo url from clone and paste
+|
+>credentials > add
+|
+>username, password, click OK
+|
+>give Branch name to perform build on it
+|
+>Build triggers
+|
+>github hook trigger
+|
+>got to repo > settings > webhooks > add new > payload url(paste jenkins url "https://host:port/github-webhook/)
+|
+>select event i.e, push/let me select individual events
+|
+>save.

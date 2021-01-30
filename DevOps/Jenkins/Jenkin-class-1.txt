@@ -1,0 +1,20 @@
+Jenkins
+-------
+when we push code to repo jenkins will pull the code and starts the pipeline for deployment.
+
+declarative pipeline
+groove script is used to define jenkins pipeline as code
+
+continous deliver means code is prodcution ready but not depolyed
+continous deployment means deploy code from repo
+
+jenkins have different lot of plugins, that's why jenkin is more popular.
+
+in jenkins we have jenkins job, a job is a unit of work for a project.
+
+install jenkins in AWS EC2
+--------------------------
+1. Launch an ec2 instance
+2. connect to instance from ssh
+3. install git
+

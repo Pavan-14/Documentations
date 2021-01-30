@@ -1,0 +1,53 @@
+creating user and restricting access
+------------------------------------
+Least privillage access --> configure global secuirity
+
+new item => create job ==> name the job
+
+description
+
+Enable project based security
+
+discard old builds => delete previous build
+days to keep builds = 2
+
+max # of builds to keep =10
+
+github project
+project url = repo url
+
+this project is parameterized => you need to pass parameters before running a job. like want to continue? yes / no (boolean parameter)
+
+throttle build = 2 (it will run 2 builds in specified time)
+
+quite period ==> time to wait between builds
+
+bloack build when upstream project is building => when dependecny is in queue jenkins prevent build.
+
+bloack build when downstream project is build
+
+ 
+source code management
+git
+
+build triggers ==> how jenkins trigger define here
+
+build environment ==> makeing envinronment
+
+Build
+add build step
+sh "python script name"
+
+build tools like ANT, Maven and Gradle comes here.
+
+post-build actions ==> after build doen what we want to do can add here.
+
+apply and save
+
+now need to make build
+
+clcik on build now.
+
+once done, click on build number.
+
+console output ==> show the commands run success/fail and build is scuccess/fail.
