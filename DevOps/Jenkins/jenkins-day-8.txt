@@ -1,0 +1,47 @@
+Multiconfiguration job/matrix project
+-------------------------------------
+same build for different environment
+
+Monitor an External job
+-----------------------
+Monitoring an external jobs such as cron jobs
+
+
+Change worksapce for job in jenkins
+-----------------------------------
+parameterixe this project
+
+string
+
+parameter name, default value, descr
+
+add another parameter
+
+choice parameter 
+
+give enviroment choices => Dev/prod/test
+
+add Boolean parameter
+
+parameter name
+
+by default value ==> check/uncheck
+
+are you sure to build?
+
+test.sh
+#!/bin/bash
+if [ "$are you sure" = "true ]; then
+	echo "success"
+else
+	echo "failed"
+fi ==> closing if
+
+Build
+-----
+
+echo '$parameter name'
+
+cp /tmp/test.sh/ /var/lib/jenkins/workspace/demo2/
+
+sh "test.sh"

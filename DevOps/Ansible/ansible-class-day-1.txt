@@ -1,0 +1,126 @@
+Ansibile
+========
+Ansible written in python.
+
+python should be installed before installing ansible.
+
+it's used to install softwares like webservers like tomcat, nginx, etc
+
+ansible works on master-slave architecture
+
+master is only linux system.
+slaves can be anything (linux/windows/mac etc)
+
+ansible uses YAML syntax
+
+ansible is agentless. it's open ssh model.
+
+master node connected with shh to all slave nodes.
+but master node should have the information about
+slave nodes.
+this information in maintained in a file called
+as "Host/Inventory" file
+
+playbooks ===> contains sequence of instructions/tasks want to execute on
+slave nodes.
+
+modules ==> it's like python modules kind of. to perform some actions we have some default modules to do that.
+
+inventory have groups
+each group will have hosts/salves servers to manage.
+so, can push to perticular group of hosts/slaves instead of push to all servers.
+
+
+Ansible Installation
+====================
+3 servers
+1 -master server
+2 -slaves servers
+
+1. cerate new EC2 instance and connect to it.
+
+2. hostname ==> it gives host name. ip address
+
+3. hostname Ansible-master-node ===> changing the host name
+
+4. if we reboot instance it will erased.
+
+5. sudo vi /ect/hostname
+
+Enter host name and save it.
+now hostname change is permenante. if reboot instance also it won't change
+
+cat /etc/passwd ===> to see all users info in EC2 instance.
+
+6. useradd AnsiAdmin ===> creating dedicated user to ansible.
+
+7. passwd AnsiAdmin(username) ===> set password to user
+enter password
+enter password again
+
+8. visudo
+shift+g ===> to come down
+
+Allow root to run any
+AnsiAdmin ALL=(ALL) NOPASSWD: ALL
+
+save and exit.
+
+9. vi /etc/ssh/sshd_config  ==> to make sure password authentication is yes
+
+/password ==> to search for password in vi editor
+
+i ===> to insert mode
+
+PasswordAuthentication yes ==> uncomment this line
+PasswordAuthentication no  ==> comment this line
+
+save and exit.
+
+10. service sshd restart / restart sshd.service / systemctl restart sshd
+
+11. sudo su AnsiAdmin ==> login as Ansible user
+
+12. ssh-keygen  ==> generate ssh keys
+
+13. sudo yum install python3
+
+14. sudo yum install python3-pip
+
+15. sudo pip install ansible
+
+16. ansible --version
+
+17. cd /etc/ ==> to see ansible dir is there or not
+
+18. mkdir /etc/ansible/
+
+19. ls -la
+
+20. sudo touch ansible.cfg   ===> create ansible configuration file
+
+21. search for ansible configuration file in google.
+https://github.com/ansible/ansible/blob/devel/examples/ansible.cfg
+copy the file
+
+22. sudo vi ansible.cfg
+
+paste it and save and exit.
+
+23. cat ansible.cfg | grep -i inventory
+
+24. sudo touch hosts
+
+[webserveres]
+ip-1
+ip-2
+
+[db_server]
+ip-3
+ip-4
+
+[app_servers]
+ip-5
+ip-6
+
+25. ansible -i full path of custom_inventory_file  -m ping   ===>   To override default invetory file(/etc/ansible/hosts)

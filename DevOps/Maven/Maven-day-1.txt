@@ -1,0 +1,18 @@
+Apache Maven
+============
+it's a build tool designed to manage 
+dependencies and software life cycle
+
+configure manven in jenkin
+==========================
+manage jenkins => manage plugins => maven integration => install
+
+restart the jenkins once
+
+global tool configure => Maven => add Mvaen => name, version, => Apply, save
+
+new => free style => build => invoke top level maven target => select maven version => goals(clean, validate, test, build etc)
+
+how maven knows test, compile.
+
+this is defined in POM.XML(project object model)

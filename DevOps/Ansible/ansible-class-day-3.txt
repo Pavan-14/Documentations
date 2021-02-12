@@ -1,0 +1,38 @@
+> ansible --list-hosts all  ===> to see all slave servers in hosts file
+
+> creating custom inventory file in other location
+
+> cd /home/AnsiAdmin/
+
+> sudo touch prod_hosts
+
+> ansible all -i prod_hosts -m ping  ==> to check custom inventory is working or not
+
+> ansible all -m copy -a "src=/home/AnsiAdmin/acript.sh dest=/var/tmp/script.sh" -b  ===>  to copy the file from master node to all slave nodes
+
+Permissions in linux
+--------------------
+4 ==> Read
+
+2 ==> Write
+
+1 ==> Execute
+
+
+---, ---, ---
+U     G    O
+
+U = User/owner
+G = Group
+O = Others
+
+-rwx,r-x,r-x
+-7  , 5 , 5
+
+0 ==> means No Special permission/option set
+
+> ansible all -m file -a "path=/var/temp/script.sh mode=0755" -b  ===> to change the permission for above moved files
+
+> ansible all -m file -a "path=/var/temp/test1.txt state=touch mode=0744" -b  ===>  to create new empty file(text1.txt) in all ansible slave nodes
+
+> ansible all -m file -a "path=/var/temp/test1.txt state=absent mode=0744" -b  ===>  to remove/delete the file

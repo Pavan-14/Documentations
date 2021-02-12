@@ -1,0 +1,39 @@
+new => free style => git hub proj => project url
+
+parameterize
+2 version
+1 for develop
+2 for prod
+
+choice parameter
+versions
+1.1
+1.2
+1.3
+
+bufore running build will give choose to version
+
+source code management
+git => repo url => if any credentials
+
+Build
+execute shell
+echo "build started"
+javac helloworld.java
+java helloworld
+echo "build done"
+
+post build action
+email notification
+enter "emaild"
+
+
+
+
+
+
+Linux Commands
+==============
+cat /etc/os-release ==> to know os of instance/VM
+crontab -e ==> to schedule/edit cronjob
+crontab -l ==> to check sheduled cronjob

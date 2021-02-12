@@ -1,0 +1,145 @@
+Creating ansible slave -1
+-------------------------
+launch new EC2 instance and connect to it.
+
+> sudo su
+
+> hostname ===> to see hostname
+
+> hostname ansible-slave-1  ===> setting new hostname
+
+> vi /etc/hostname
+
+enter the new hostname
+save and exit
+
+> useradd AnsiAdmin  ==> to create/add new user
+
+> passwd AnsiAdmin
+enter password:
+reenter password:
+
+>visudo
+shift+G
+Allow root to run any command anywhere
+add the newly creataed user here after root.
+
+> vi /etc/ssh/sshd-config
+
+> PasswordAuthentication yes ==> uncomment this line
+
+> PasswordAuthentication no ==> comment this line
+
+> service sshd restart
+
+> sudo su - AnsiAdmin
+
+> ip addr ===> To find the IP.
+
+
+Now, go to master node instance
+
+> cd /etc/ansible/
+
+> sudo vi hosts
+
+copy the slave instance ip and paste here
+
+> ssh-copy-id "private ip of slave instance"  ==> to copy the ssh keys to master node
+yes
+enter password
+
+> ssh "private ip of slave instance"
+Now, it's connected to slave node
+
+> ansible all -m ping
+
+
+
+Creating ansible slave -2-Ubuntu
+---------------------------------
+launch new Ubuntu EC2 instance and connect to it.
+
+> sudo su
+
+> hostname ===> to see hostname
+
+> hostname ansible-slave-2  ===> setting new hostname
+
+> vi /etc/hostname
+
+enter the new hostname
+save and exit
+
+> useradd -m -d /home/AnsiAdmin AnsiAdmin  ===> to create user in Ubuntu
+
+> passwd AnsiAdmin
+enter password:
+reenter password:
+
+# > userdel AnsiAdmin  ===> to delete user
+
+>visudo
+shift+G
+
+User privileges specification
+AnsiAdmin ALL=(ALL) NOPASSWD: ALL  ==> add this line after root
+
+> vi /etc/ssh/sshd_config
+
+> PasswordAuthentication no ==> make it yes
+
+> service sshd restart
+
+> sudo su - AnsiAdmin
+
+> ip addr ===> To find the IP.
+
+
+Now, go to master node instance
+
+> cd /etc/ansible/
+
+> sudo vi hosts
+
+copy the slave instance ip and paste here
+
+> ssh-copy-id "private ip of slave instance"   ==> to copy the ssh keys to master node
+yes
+enter password
+
+> ssh "private ip of slave instance"
+Now, it's connected to slave node
+
+> ansible all -m ping
+
+
+-----------------------------------
+ansible adhoc command syntax format
+-----------------------------------
+ansible "inventory filepath" "which server" -m "module name"
+
+inventory filepath ==> default to /etc/ansible/hosts
+which server  ==> default to all
+
+ansible all -m command -a "uptime"
+ansible all -m command -a "hostname"
+
+ansible all -m yum -a "name=git" -b  ==> to install git in all servers with sudo
+NOTE:
+-----
+"-b" means run command as sudo
+But, this command will give error if all the servers are different linux flavours like redhat, ubuntu, centos.
+
+To overcome this
+----------------
+make groups in master hosts file
+[web_linux]
+[app_ubuntu]
+
+> ansible web_linux -m ping
+> ansible app_ubuntu -m ping
+> ansible web_linux -m yum -a "name=git" -b
+> ansible web_linux -m user -a "name=test-user" -b  ===>  to create the user
+
+

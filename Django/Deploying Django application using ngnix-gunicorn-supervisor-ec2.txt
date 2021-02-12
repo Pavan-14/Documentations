@@ -2,109 +2,10 @@
 						Deploying Django application using nginx,gunicorn, supervisor and ec2
 =======================================================================================================================================================================
 
-Creating AWS Account
----------------------
 
-First we need to create a AWS account
-
-for creating AWS account go to this link "https://aws.amazon.com/console/" and click on Create an AWS Account
-
-AWS Accounts Include 12 Months of Free Tier Access Including use of Amazon EC2, Amazon S3, and Amazon DynamoDB
-
-For more details of free tier services Visit "https://aws.amazon.com/free/?all-free-tier.sort-by=item.additionalFields.SortRank&all-free-tier.sort-order=asc"
-
-After creating AWS Account login to the AWS console.
-
-
-
-Creating AWS EC2(Elastic Compute Cloud) Instance
--------------------------------------------------
-Go to Services Menu
-
-Under Compute Category Select EC2
-
-Under Launch instance section Click on Launch Instance.
-
-Then Choose an Amazon Machine Image (AMI) i.e, operating system to install on EC2 instance
-
-Step 1: Choose an Amazon Machine Image (AMI)
-
-Select "Ubuntu Server 18.04 LTS (HVM), SSD Volume Type - ami-07c1207a9d40bc3bd (64-bit x86) / ami-0a5ee0336de62011b (64-bit Arm)" or Higer one And select "64-bit x86" Architecture
-
-Step 2: Choose an Instance Type
-
-Select t2.micro free tier eligible and click Next: Configure Instance Details
-
-Step 3: Configure Instance Details
-
-Don't do any changes as of now just leave it to default and click Next:Add Storage
-
-Step 4: Add Storage
-
-laeve to default settings and click Next:Add Tags
-
-Step 5: Add Tags
-
-don't do anything just click Next:Configure Security Group
-
-Step 6: Configure Security Group
-
-if we want we can change the security gruop name and description
-
-add rules which we want by click on Add Rule
-
-R1  ===>  Type = HTTP, Protocol = default(TCP), Portrange = default(80) Source = default(Custom/Anywhere) Description = nginx Rule
-
-R2  ===>  Type = default(Custom TCP Rule), Protocol = default(TCP), Portrange = any port u want, Source = default(Custom) Description = Application Rule
-
-
-Then Click Review And Launch
-
-Then we need to create a new key file
-
-select create a new key file 
-
-give the file name u want
-
-click download key
-
-Then Click Launch
-
-Then Click on the instance id to navigate to the Instance
-
-
-
-
-Connecting to EC2 instance using PuTTY
-----------------------------------------
-
-Now Download putty and install it
-
-after installing putty open puTTYgen 
-
-click load and navigate to the previously downloaded .pem file 
-
-then choose the appropriate "Type of key to generate" under Parameters section (SSH is recommended)
-
-then click Generate and move the cursor until key generation complete
-
-then click Save private key and save it in your computer
-
-
-Now open putty 
-
-copy the "IPv4 Public IP" address from aws console and enter in the Host Name(or ip address)in the putty
-
-Then in putty under category section go to connection -> SSH -> Auth  Browse the file which we generate using puttygen and clcik open
-
-Now it will ask for Login as: Enter ubuntu for ubuntu Amazon Machine Image (AMI).
-
-Then we successfully connected to our Instance
-
-
-
-Deploying Django Application
------------------------------
+===========================
+STEP-1 DEPLOY READY CHECK
+===========================
 
 Before deploying the application we need to check wether our app is ready of deploy
 
@@ -114,8 +15,11 @@ This will verify the check list for deploy ready and gives the WARNINGS if we mi
 
 Then Keep '*' under ALLOWED_HOSTS = [] in the settings.py file to allow all hosts to the application.
 
-After these checks go to puTTY
 
+=============================================================
+STEP-2 INSATLLING PYTHON AND CONFIGURING VIRTUAL ENVIRONMENT
+=============================================================
+After these checks connect to EC2 Instance
 
 ubuntu@ip-172-31-16-29:~$ ls -l
 total 0
@@ -188,6 +92,11 @@ pkg-resources==0.0.0
 pytz==2020.1
 
 
+
+============================
+STEP-3 CLONE GIT REPOSITORY
+============================
+
 Now clone the git peoject repository
 
 git clone https://github.com/Vissu-A/Web-Dev.git
@@ -198,7 +107,9 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Jun 13 11:21 VirEnv
 drwxrwxr-x 4 ubuntu ubuntu 4096 Jun 13 12:09 Web-Dev
 
 
-
+=====================================
+STEP-4 INSTALLING Nginx and Gunicorn
+=====================================
 we need some softwares to server our application from aws Ec2
 
 In local environment Django uses python's built-in http server to server the application but in case of deployment we need to use actual server Apache / nginx
@@ -220,9 +131,9 @@ gunicorn is a pip module
 
 (Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ pip install gunicorn
 
-(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ sudo apt-get install -y nginx
+(Django2.0.7_Py3.6.9) ubuntu@ip-172-31-16-29:~$ sudo apt-get install nginx -y
 
-Then if you visit your Public DNS (IPv4) "http://ec2-52-14-57-170.us-east-2.compute.amazonaws.com/" on the browser you will see Welcome to nginx! message
+Then open browser and enter "http://instance-ip:80". you will see Welcome to nginx! message
 
 So, nginx is installed successfully
 
@@ -230,6 +141,11 @@ NOTE:
 ------
 If you are unable to see Welcome to nginx! message make sure that you are added HTTP rule in inbound rules of Security Group for the instance.
 
+
+
+=====================================
+STEP-5 CONNECTING Gunicorn and Nginx
+=====================================
 
 
 Now we need to connect gunicorn(wsg interface) and nginx
@@ -249,6 +165,12 @@ but your static files like css, images will not loaded we will deal this later
 if you get dissalowed host error then add instance IPv4 Public IP address to ALLOWED_HOST list in settings.py file
 
 
+
+
+=============================
+STEP-6 Configure Supervisour
+=============================
+
 NOTE:
 ------
 if you stop the command or close the reminal then our application will be stoped or down. This is where supervisor comes in
@@ -259,13 +181,9 @@ cases supervisour make sure our application upon running.
 This means supervisour make sure gunicorn always running in background to process request from web server nginx
 
 
-
-Configure Supervisour
-----------------------
-
 installing Supervisour
 
-$ sudo apt-get install -y supervisor
+$ sudo apt-get install supervisor -y
 
 After installation success we need to create a configuration so supervisor read from that configuration
 
@@ -285,13 +203,13 @@ Nothing in the directory now create a new file
 total 0
 -rw-r--r-- 1 root root 0 Jun 13 14:29 gunicorn.conf
 
- file created now edit it
+file created now edit it
 
 $ sudo nano gunicorn.conf
 
 [program:gunicorn]    # tell to run the specified program gunicorn
 directory=/home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning   # tells where is the above program 
-command=/home/ubuntu/VirEnv/Django2.0.7_Py3.6.9/bin/gunicorn --workers 3 --bind unix:/home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning/app.sock Dlearning.wsgi:application
+command=/home/ubuntu/VirEnv/Django2.0.7_Py3.6.9/bin/gunicorn --workers 3 --bind unix:/home/ubuntu/Web-Dev/Django2.0.7_Py3.6.5/Dlearning/app.sock(or)http://instance-ip:8000 Dlearning.wsgi:application
 autostart=true  # to tell start on system start
 autorestart=true  # to tell if something goes wrong auto restart
 
@@ -328,7 +246,9 @@ guni:gunicorn                    RUNNING   pid 29432, uptime 0:00:17
 Now gunicorn is running in backgroun
 
 
+=================================================
 Now cofigure nginx to read from this socket file
+=================================================
 
 go back to home dir "cd ~"
 

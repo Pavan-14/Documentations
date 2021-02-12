@@ -1,0 +1,54 @@
+Job is also called "project"
+linting => to check the file format is correct or not
+
+Queue => jobs are in queue when we create ajob, 
+jenkins execute jobs sequentially/.
+
+plugins => these plugins provide extra functionality to jenkins
+
+Build => it is a result of single execution of project
+
+Build step => it is one task with in a project
+
+Artifacts
+==========
+heloworld.java
+javac heloworld.java =>  when we run/compile this file in jenkins .class file generated
+this compilation files stored as artifacts.
+
+all the files generated while code compiling/build in jenkins are stored as Artifacts.
+
+
+=> Jenkins file is a file where we write pipeline as code using declarative syntax
+
+=> Jenkins config file to change Port of Jenkins
+=============
+
+	Project/Job types in Jenkins
+	============================
+
+1. Free-style
+=============
+general purpose/common jobs , most flexibile and configurable, the build step for this type of project is shell script/windows commands.
+Ex: file is there, file has permission or not and execute the shell command.
+we use when we have simple requrements like executing shell/windows commands.
+this type have full control and 100% customigabile.
+
+2. Pipeline
+===========
+this is called as workflow written in DSL(Domain specific language).
+we use this when requirement is not fulfill by Free-style.
+little complicated project than free-style/ multi node project(need to run job in multiple nodes)
+Ex: cloning the repo and compiling the code and build it.
+when we have to use separate Build tool.
+
+Build Tools
+===========
+Apache Maven
+ANT
+
+these tools helps with build
+
+when we installed plugin in jenkins, first go to "global tool configuration" and configure the plugin settings.
+
+

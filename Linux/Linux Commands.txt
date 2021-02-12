@@ -1,0 +1,17 @@
+> clear    ===>   To clear the terminal
+
+> ls -l
+
+> ls -la
+
+> touch "filename.txt(any extention)"
+
+> cat "filename.txt"
+
+> sudo wget "link path (https://downloads.apache.org/tomcat/tomcat-8/v8.5.63/bin/apache-tomcat-8.5.63.tar.gz)"  ===> downloading any package(tomcat server)
+
+> ls -ltr
+
+> chmod 777 "filename.txt"  ===>  giving specified permissions to any file
+
+> find / -name "filename.txt"  ==> to find the path of file

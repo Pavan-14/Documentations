@@ -1,0 +1,5 @@
+> sudo su   ===>   Change to super user
+
+> yum install maven -y   ===>   installing maven
+
+> mvn -version/mvn --version   ===>   checking maven installation and version

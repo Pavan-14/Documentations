@@ -1,0 +1,12 @@
+Commands to install jenkins
+----------------------------    
+> sudo su
+> yum update -y
+> yum install java (or) yum install java-1.8.0-openjdk
+> wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo
+> rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+> yum install jenkins -y
+
+> systemctl status jenkins
+> systemctl start jenkins
+> yum update jenkins -y

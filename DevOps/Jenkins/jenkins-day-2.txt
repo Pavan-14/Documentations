@@ -25,3 +25,41 @@ installing and setingup jenkins
 19. manage jenkins ==> plugin manager
 20. manage jenkins ==> manage users
 
+
+Commands to install jenkins
+----------------------------    
+sudo su
+yum update -y
+yum install java 
+wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo
+
+rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+
+yum install jenkins -y
+
+
+> systemctl status jenkins
+> systemctl start jenkins
+
+> open browser and paste http://instanceip:8080/
+
+if not working, check port 8080 is opened or not in secquirity groups inbound rules
+
+> now, copy the file path showing on jenkins page ("/var/lib/jenkins/secrets/initialAdminPassword")
+
+> cat "above file path"
+
+copy the password and enter in jenkins "Administrator password"
+
+continue
+
+> click install suggested plugins
+
+> create user
+
+save and continue
+
+> copy jenkins url and save it somewhere
+
+save and finish
+

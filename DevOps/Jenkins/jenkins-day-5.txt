@@ -1,0 +1,51 @@
+Jenkins pipeline as a code
+--------------------------
+new item => pipeline ==> advanced projects options ==> pipeline script ==> write declarative pipeline script
+
+pipleline{
+	agent any
+	environment {}
+	stages{
+		stage("stage name-clone repo"){
+			steps{
+				git branch :'main' url: "repo url"
+			}
+		}
+
+		stage("stage name-Build"){
+			steps{
+				echo "fjlkjlkjf"
+				cat file1.txt
+			}
+		}
+		
+		stage("Test"){
+			steps{
+				cd ..
+				another command
+			}
+		}
+
+		stage("Deploy"){
+			steps{
+				cd ..
+				another command
+			}
+		}
+}
+
+
+we can check the pipeline syntax
+if we don't know the script to check for file exists are not, we can generate script snippet using pipeline syntax
+
+
+by source code file in repo
+----------------------------
+vscode => new file => file name "jenkinsfile"
+
+paste declarative pipeline in the jenkinsfile
+
+save.
+
+push to repo
+

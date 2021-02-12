@@ -1,0 +1,120 @@
+Tomcat server installation and configuration
+============================================
+
+=======
+STEP-1
+=======
+> sudo su
+
+> yum install wget -y
+
+> wget https://downloads.apache.org/tomcat/tomcat-9/v9.0.43/bin/apache-tomcat-9.0.43.tar.gz   ===>  downloading tomcat
+
+> tar -zvxf apache-tomcat-9.0.43.tar.gz  ===> extracting tomcat server tar file
+
+> cd apache-tomcat-9.0.43/bin/
+
+we can see to files 
+1. startup.sh   ==>   to start tomcat server
+2. shutdown.sh  ==>   to stop tomcat server
+
+> chmod 777 *.sh   ===>  giving all privileges to all shell script files
+
+
+set commands to start and stop server from any directory
+
+> pwd
+/home/ec2-user/apache-tomcat-9.0.43/bin
+
+> echo $PATH
+/sbin:/bin:/usr/sbin:/usr/bin
+
+> ln -s /home/ec2-user/apache-tomcat-9.0.43/bin/startup.sh /usr/bin/tomcatstart
+
+> ln -s /home/ec2-user/apache-tomcat-9.0.43/bin/shutdown.sh /usr/bin/tomcatstop
+
+
+check tomcat status
+
+> ps -ef | grep tomcat
+
+
+
+========
+STEP-2
+========
+Change port number from 8080 to 8081 (As Our Jenkins on AWS is also listening to the port 8080)
+
+> cd ..  ===> return back from bin directory to tomcat directory
+
+> cd conf/  ===>  change to conf directory
+
+> nano server.xml  ===>   open server configuration xml file
+
+change port number from 8080 to 8081 under "Connector" tag
+save the file(ctl+s) and Exit (ctl+x)
+
+> cd ..  ===>  return back to tomcat directory from conf directory
+
+> tomcatstop   ===>  stop the tomcat server
+
+> tomcatstart   ===>   start the tomcat server
+
+> allow port 8081 in EC2 secqurity groups inbound rules
+
+> now go to browser and open url "http://instance public ip:port(8081)/
+
+if everything got success you will see tomcat home page.
+
+
+
+========
+STEP-3
+========
+
+> cd ..  ===> go back to apache tomcat directory
+
+> cd conf  ===>  go to apache tomact conf directory
+
+> nano tomcat-users.xml
+
+  <role rolename="admin-gui"/>
+  <role rolename="admin-script"/>
+  <role rolename="manager-gui"/>
+  <role rolename="manager-status"/>
+  <role rolename="manager-script"/>
+  <role rolename="manager-jmx"/>
+  <user name="admin" password="admin" roles="admin-gui,admin-script,manager-gui,manager-status,manager-script,manager-jmx"/>
+
+enter above configurations, save and exit
+
+> tomcatstop
+
+> tomcatstart
+
+
+
+========
+STEP-4
+========
+> cd ..
+
+> cd webapps
+
+> cd manager
+
+> cd META-INF/
+
+> nano context.xml
+comment the line "<value something/>"
+
+> tomcatstop
+> tomcatstart
+
+> now go to tomcat server in browser, and click on "Manager apps"
+
+> enter username and password, click OK.
+
+if all correct, you will be logged into server successfully.
+
+
