@@ -1,0 +1,76 @@
+Terraform
+---------
+
+infrastructure as code
+
+TERRAFORM USED TO CREATE INFRASTRUCTURE USING CODE
+
+we can use Cloud Formation also but, that is only specific to AWS  cloud only
+but, teraform supports multi cloud like aws , gcp, azure etc.
+
+we can create infrasturcture using code in any cloud by using terraform.
+
+
+go to ==> https://www.terraform.io/downloads.html
+
+select 64-bit windows
+
+once downloaded extract it to any location you want
+
+
+> terraform refresh  ===> refresh the terraform view what cloud i am using
+
+> terraform plan     ===> which tell you what you are going to do and what is real world.  real world <--> real world
+
+> terraform apply    ===> To create the desired infrastructure 
+
+> terraform destroy  ===> it will destroy the infrastructre created using Terraform apply.
+
+
+
+create a dir under terraform installed directory.
+
+> first we need to give access to terraform for aws cloud
+
+> go to aws >> iam >> user >> username >> programatic access >> policies >> administrator >> create >> downalod csv file.
+
+copy access key id, secrect key and save in notepad++
+
+
+create a file with the name "terraform.tfvars"
+
+AWS_ACCESS_KEY = paste the saved access key.
+AWS_SECRET_KEY = paste the saved secrect key.
+
+
+
+create a file with name "providers.tf"
+
+provider "aws"{
+	access_key = paste access key
+        secrect_key = paste secrect key
+        region = paste aws region
+}
+
+
+> terraform init   ===> run this command in terraform practice dir created under terraform directory.
+terraform connect internet and try to download plugin for aws.
+
+
+instance.tf
+
+resource "aws_instance" "web_Test(give any name here)" {
+	ami = "ami-id"
+	instance_type = "t2.micro"
+	AWS_REGION= "us-west-1"
+}
+
+> terraform fmt  ===>  this will format the terraform script.
+
+> terraform validate   ===>  this validate the terraform script for any errors
+
+> terraform plan  ===>  this will give a view what it's going to happen when we run the tf script. like creating a resoursce, deleting a resource, any effecting resources..etc.
+
+> terraform apply  ===>  this will run tf script and creates the infrastructure in provided cloud.
+
+> terraform destroy  ===>  it's going to delete the infrastructure created by terraform script.

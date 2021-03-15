@@ -1,0 +1,132 @@
+main.tf
+-------
+terraform{
+  required_providers {
+    provider{
+    
+    }  
+
+	
+  }
+
+}
+
+
+(or)
+
+
+provider "aws" {
+  region = "paste region here"
+  access_Key = "paste access key here"
+  secrect_key = "paste secrect key here"
+}
+
+
+resource "aws" "terrainstance" {
+  ami = "ami-id"
+  type = "t2.micro"
+
+  tags = {
+    Name = "Web_server"
+    Owner = "Vissu"
+  }
+
+}
+
+
+> create a directory under terraform directory
+
+> cd new-directory
+
+> terraform init   ===>  to make the directory as terraform directory
+
+> touch main.tf
+
+> sudo vi main.tf
+
+> paste the above code in file
+
+> save and exit
+
+> terraform fmt
+
+> terraform validate  ===>  to check configuration is valid or not
+
+> terraform plan
+New, state file is created, this file used to maintain the state of the infrastructure.
+
+> terraform apply   ===>  this will execute the terraform plan and creates the infrastructure.
+
+> terraform destroy --auto-approve
+
+
+
+Creating VPC
+------------
+
+resource "aws_vpc" "terraform vpc name"{
+   cider_block = ""
+   instance_tenancy = "default"
+   
+   tags = {
+     Name : "Custom_vpc_1"
+   }
+
+}
+
+resource "aws_subnet" "terraform subnet name"{
+  
+  vpc_id = "aws_vpc.terraform vpc name.id"
+  cidr_bloack = ""
+  
+  tags = {
+    Name = "public-subnet"
+  }
+
+}
+
+
+resource "aws_subnet" "terraform subnet name"{
+  
+  vpc_id = "aws_vpc.terraform vpc name.id"
+  cidr_bloack = ""
+  
+  tags = {
+    Name = "private-subnet"
+  }
+
+}
+
+
+resource "aws_internet_gateway" "Igw" {
+  
+  vpc_id = aws_vpc.terraform vpc name.id
+
+  tags = {
+     Name = "My_Igw"
+  }
+
+}
+
+
+To see output in screen when you run terraform script
+=====================================================
+output "VPC_ID" {
+  value = aws_vpc.terraform vpc name.id
+}
+
+output "IGW_ID" {
+  value = aws_internet_gateway.Igw.id
+}
+
+
+> terraform state show
+
+> terraform state list
+
+> terraform state show resource_name
+
+
+To maintain state file remotely
+===============================
+https://www.terraform.io/docs/language/settings/backends/s3.html

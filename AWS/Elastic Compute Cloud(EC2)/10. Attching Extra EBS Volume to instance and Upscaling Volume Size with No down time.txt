@@ -1,0 +1,44 @@
+Attach Additional EBS
+=====================
+> df -h
+> df -PH
+> df -hT
+
+> lsblk     # Verify the attached EBS volumes are recognized (except RAM disks).shows in a tree-like format by default.
+
+> sudo file -s "EBS volume NAME" (ex: /dev/xvdf)    # This is used to check data is present or not in the newly Attched EBS  volume"
+
+> mkfs -t ext4 /dev/xvdf   # To make file system for EBS volume to be used by instance
+
+After creating file system, again check data is available in EBS volume
+> sudo file -s "EBS volume NAME"
+
+copy the "UUID=4121cfdd-9786-490a-ab37-4f564a8208ac"
+
+> cd /   # change to root directory
+
+> mkdir /ExtEBS   
+
+> sudo mount /dev/xvdf /ExtEBS
+
+
+if we reboot instance, in sometimes EBS volume may detach automatically, to avoid this we need to add the volume UUID in a file called "fstab"
+
+> sudo vi /etc/fstab
+paste the copied UUID in below format
+
+UUID=4121cfdd-9786-490a-ab37-4f564a8208ac     /ExtEBS     ext4   defaults,nofail   0   2
+
+
+Detach Additional EBS
+======================
+first unmount 
+
+> unmount /ExtEBS 
+
+then got to console, and detach the vloume and delete it.
+
+
+Note:
+-----
+we can upscale Attached EBS volume size with no down time from console.

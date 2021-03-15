@@ -39,7 +39,7 @@ when developers push the latest changes.
 |
 >github hook trigger
 |
->got to repo > settings > webhooks > add new > payload url(paste jenkins url "https://host:port/github-webhook/)
+>got to repo > settings > webhooks > add new > payload url(paste jenkins url "http://host:port/github-webhook/)
 |
 >select event i.e, push/let me select individual events
 |

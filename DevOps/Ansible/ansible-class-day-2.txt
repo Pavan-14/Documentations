@@ -15,6 +15,8 @@ save and exit
 
 > useradd AnsiAdmin  ==> to create/add new user
 
+Note: check if a directory with username is created or not under the path "/home/".
+
 > passwd AnsiAdmin
 enter password:
 reenter password:
@@ -73,6 +75,8 @@ save and exit
 
 > useradd -m -d /home/AnsiAdmin AnsiAdmin  ===> to create user in Ubuntu
 
+Note: check if a directory with username is created or not under the path "/home/".
+
 > passwd AnsiAdmin
 enter password:
 reenter password:
@@ -102,9 +106,9 @@ Now, go to master node instance
 
 > sudo vi hosts
 
-copy the slave instance ip and paste here
+copy the slave instance private ip and paste here
 
-> ssh-copy-id "private ip of slave instance"   ==> to copy the ssh keys to master node
+> ssh-copy-id "private ip of slave instance"   ==> to copy the ssh keys to slave nodes
 yes
 enter password
 

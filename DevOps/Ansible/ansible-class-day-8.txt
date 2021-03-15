@@ -1,0 +1,107 @@
+ansible roles
+===============
+roles are used to break down the playbooks into small chunks
+
+creating role
+
+> cd /etc/ansible/
+
+> sudo mkdir roles
+
+> cd roles/
+
+> sudo mkdir apache(role name)
+
+> sudo mkdir defaults files handlers meta templates tasks vars
+
+> every directory should have a main.yml file.
+
+> cd tasks/
+
+> sudo vi main.yml
+
+    - name: "installing httpd on aws linux"
+      yum:
+        name: "httpd"
+        state: present
+      when: ansible_os_family == "RedHat"
+      tags: "install_httpd"
+      notify: "start_httpd"
+
+    - name: Ensure the Default Apache port is {{port}}
+      lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^Listen'
+        insertafter: '^#Listen'
+        line: Listen {{port}}
+      when: ansible_os_family == "RedHat"
+      nofity: restart apache httpd
+   
+
+copy all the tasks to this file and save.
+
+> cd handelrs/
+
+> sudo vi main.yml
+
+    - name: "start_httpd"
+      service:
+        name: "httpd"
+        state: started
+      when: ansible_os_family == "RedHat"
+
+    - name: restart apache httpd
+      service:
+        name: httpd
+        state: restarted
+
+copy the all handler tasks to this file
+
+
+> cd vars/
+
+> sudo vi main.yml
+
+port = 8081
+
+copy all varibles in this file and save.
+
+
+> cd defaults/
+
+> sudo vi main.yml
+
+port = 8080
+
+if port varible is not given in vars/main.yml file then port is taken from defaults/main.yml
+
+
+> cd files/
+
+place the files which you want to move to slaves.
+
+
+Now go to playbook
+add below lines
+
+roles:
+ - role1
+ - role2
+
+
+
+
+> cd /etc/ansible/roles/
+
+go to ansible galaxy website and serach for roles for httpd
+
+copy the url and type the command
+
+> ansible-galaxy paste the url
+
+this will create all folders and files under
+"/home/username/.ansible/" directory
+
+
+ansible galaxy is nothing but like a github, where all pre-created roles are there for every service.
+

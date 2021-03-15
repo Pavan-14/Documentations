@@ -1,0 +1,29 @@
+> install pre-reqisites based on your OS
+
+	For RedHat:
+		sudo yum install @development zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl-devel xz xz-devel libffi-devel findutils
+
+	For other OS:
+		Refer this link "https://github.com/pyenv/pyenv/wiki/common-build-problems"
+
+> cd /opt
+
+> list of python versions
+
+	Refer this link "https://www.python.org/ftp/python/"
+
+> sudo wget https://www.python.org/ftp/python/3.6.5/Python-3.6.5.tgz
+
+> sudo tar -xzvf Python-3.6.5.tgz
+
+> cd Python-3.6.5
+
+> sudo ./configure
+
+> sudo make
+
+> sudo make install
+
+Done. 
+
+python-3.6.5 will be installed in the location "/usr/local/bin/python3"

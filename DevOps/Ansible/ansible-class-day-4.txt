@@ -1,0 +1,56 @@
+> sudo su
+> cat /proc/meminfo   ==> to check all memory info of a server
+
+> touch mem.txt
+> ls -lrt ==> to see the permissions
+> cat /proc/meminfo | head -5 > mem.txt
+
+
+> ansible all -m shell -a "cat /proc/meminfo | head -5" -b
+
+> ansible all -m shell -a "df -Ph"  ==> to see the current disk usage.
+
+=========================
+Writing ansible playbooks
+=========================
+Ansible playbooks uses YAML format
+
+playbook is a sequence of ordered tasks
+
+---
+-name : creating users (# playbook name)
+ hosts : all
+ become : true (# to become sudo user)
+ vars:
+   -username : give user name
+ tasks:
+ - name : first user creation(# task name)
+   user :
+     name: user_name (or) give variable [ex: "{{ username }}"]     comment: full name of user/anything we can give
+
+save and exit.
+
+> ansible all --list -hosts  (list of slave hosts)
+
+> ansible-playbook playbook_name.yml --check  ===> to check syntax
+
+> ansible-playbook playbook_name.yml ===> to run playbook
+
+When we run a playbook ansible will run a predefined task "Gathering facts" 
+This Task will get all details like OS, OS version, kernal, python version. python path, ..etc.
+
+This command "ansible all -m setup" will run in background of Gathering facts task.
+
+we use this information for writting conditional playbooks.
+
+giving variable at runtime
+--------------------------
+> ansible-playbook playbook_name.yml -e "username=testuser"
+
+Now, this username value overrides the username value given in playbook
+
+
+giving variable from file
+-------------------------
+var_files:
+  -file.yml

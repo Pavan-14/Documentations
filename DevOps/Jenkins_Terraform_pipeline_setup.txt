@@ -1,0 +1,33 @@
+Installing Terrafrom in jenkins server
+======================================
+
+> wget https://releases.hashicorp.com/terraform/0.14.7/terraform_0.14.7_linux_amd64.zip
+
+> unzip terraform_0.14.7_linux_amd64.zip
+
+> terraform --version
+
+> mv terraform /usr/bin/terraform
+
+> terraform --version
+Terraform v0.14.7
+
+
+Installing Terraform plugin in jenkins
+======================================
+
+> go to manage jenkins >> manage plugins >> go to avilabe search for terraform and install.
+
+
+Configure the terraform plugin
+==============================
+> go to global tool configurations ==> Add Terraform ==> give a Name ==> give the terraform installed directory path "/usr/bin/" ==> uncheck "Install automatically" ==> apply and save.
+
+
+Attaching role to jenkins instance
+==================================
+Now, go to ==> IAM ==> Create Role ==>  select the service(EC2) ===> attach required policies(Admin policy)  ==> give role name ==> click "Create Role"
+
+Now, go to ==> EC2 ==> select jenkins instance ==> click Actions ==> select security ==> Modify IAM Role ==> select the above created role ==> Click Save.
+
+

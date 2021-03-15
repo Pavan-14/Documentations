@@ -1,0 +1,76 @@
+Kubernetes
+===========
+it is used to manage the containers.
+containers may be docker or any other
+
+kubernetes is a container orchestration tool
+
+Popular container orchestration tools
+-------------------------------------
+docker swarm
+kubernetes by google
+mesos
+
+Kebenetes support all cloud providers like aws, gcp, azure etc
+
+Now a days developemt is moving from monolith to microservices.
+to run microservices they are deployed to containers.
+to manage all this microservice docker containers we are using kubernetes.
+
+
+Kubernetes cluster
+
+control plane
+1. control manger
+2. ccm  ==> cloud control manger
+3. api server
+4. etcd ==> key vlaue pair database
+5. sheduler ==> this will put contianer in a high available node in the cluster
+
+nodes
+
+each node have 2 components
+1. kubelet  ===>  checks the status of node and communicate to the control manager.
+2. Kproxy   ===>  to communicate between cotainer nodes
+node is nothing but a server(like ec2 instance)
+nodes will run our docker containers
+
+each node connects to the api server in control plane using kublets or k-proxy.
+
+
+control manager
+---------------
+
+Desired state: 6 containers ===> always desired number of containers should run
+Current state: 5 containers ===> how many nodes are running currently
+one node goes down it will compare desired state and spin up node according to deifined state.
+
+
+Node
+----
+node is nothing but 1 ec2 server
+1 node can have multiple pods
+based on ec2 type the capacity of pods can run vary.
+https://github.com/awslabs/amazon-eks-ami/blob/master/files/eni-max-pods.txt
+
+pod
+---
+it's a small unit where container will run
+1 pod will run 1 container only.
+each pod will have unique ip address
+
+when we terminate and launched new pod the ip will change
+to overcome this behaviour we use concept called "service"
+
+we will map service with pod, this service will have fixed ip. (this is like Elastic IP in AWS)
+
+engress ==> this map the ip to a user frendly name. (this like DNS maping)
+
+
+Deployment
+----------
+replica set(rs) make sure the number Desired state nodes are running.
+
+EKS
+---
+aws service for 

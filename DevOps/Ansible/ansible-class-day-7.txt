@@ -1,0 +1,69 @@
+tagging
+=======
+use tags to target a particular task to run instead of all playbook (or) to skip a particular task.
+tags: install_httpd #any tag name
+
+-name: task name
+ module:
+  name: software name
+  state: present
+ when: ansible_os_family == "RedHat"
+ tags: any tag name
+
+
+> ansible-playbook palybook_name.yml --list-tags  # to list out all tags in playbook
+
+> ansible-playbook palybook_name.yml --tags "tag_name"    ===> it will run only that perticular tag task instead of whole playbook.
+
+> ansible-playbook palybook_name.yml --tags ["tag_name1", "tag_name2"]    ===> it will run only that perticular tag tasks instead of whole playbook.
+
+> ansible-playbook palybook_name.yml --skip-tags "tag_name"   ===> it will skip that tag task. and all reamining tasks in playbook.
+
+
+Handlers
+========
+Handler will run only when change occured in system.
+we shloud have a notifier task in playbook to run handler
+we should have a notify tag in the task
+
+after making changes to configuration files we have to restart the service
+ex: tomact, nginx servers
+
+
+-name: start httpd
+ yum:
+  name: httpd
+  state: present
+ when: ansible_os_family == "RedHat"
+ tags: start_httpd
+ notify: start apache httpd
+
+ handlers:
+ 
+
+
+lineinfile module  ===> to make changes in any file
+
+---
+- name: playbook name
+  hosts: all
+  vars:
+   port: 8082
+  become: true
+  tasks:
+  - name: Ensure the Default Apache port is {{port}}
+    lineinfile:
+      path: /etc/httpd/conf/httpd.conf
+      regexp: '^Listen'
+      insertafter: '^#Listen'
+      line: Listen {{port}}
+    when: ansible_os_family == "RedHat"
+    nofity: restart apache httpd
+
+    handlers:
+    - name: restart apache httpd
+      service:
+        name: httpd
+        state: restarted
+
+...

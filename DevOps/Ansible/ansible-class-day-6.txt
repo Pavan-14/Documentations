@@ -1,0 +1,31 @@
+> ansible all -m command -a "uptime" -o  ===>   -o is used to give output in one line
+
+> ansible-doc <module name>   ===> to see the module documentation. to understand how module works
+
+Ex: ansible-doc ping
+
+> ansible --help   ===>  to get help about ansible adhoc command arguments like -m, -a, -o, ...etc.
+
+> ansible all -m copy -a "src=etc/ansible/filename dest=destination location path mode=0666" 
+
+---
+-name: playbook name
+ hosts: all/group
+ become: true
+ tasks:
+ -name: install apache httpd
+  yum:
+    name: httpd
+    state: present
+
+ -name: start httpd service
+  service:
+    name: httpd
+    service: started
+
+ -name: copy file
+  copy:
+    src: path of file
+    dest: destination path
+    mode: 0666
+...

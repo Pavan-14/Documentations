@@ -1,0 +1,115 @@
+> cd /etc/ansible
+
+> sudo mkdir playbooks
+
+> cd playbooks/
+
+
+---
+-name: play book name
+ hosts: host inventory file/all
+ become: true
+ gather_facts: no  # to not run default gathering facts 
+ vars:
+   var_name1: value
+   var_name2: value
+ tasks:
+   -name: task name
+    command: date
+
+   -name: task name
+    command: any command
+
+   -name: installing tree
+    yum:
+      name: tree
+      state: present/installed
+
+...
+
+Note: all yaml files ends with 3 dots(...)
+
+
+Save and Exit
+
+> ansible-playbook host/host_group/all playbook_name.yml --check
+
+> time ansible-playbook host/host_group/all playbook_name.yml --check  ===> time taking to execute this command
+
+
+To stop/not run default gathering facts task
+============================================
+open playbook and below line after become.
+
+gather_facts: no  # to not run default gathering facts
+
+
+> ansible-playbook playbook_name.yml --list-hosts --list-tasks   # to list all hosts and tasks
+we have to run this command everytime before running playbook.
+
+
+But in ubuntu server yum will not work, installing task will fail on ubuntu.
+
+to solve this
+
+gather info about ubuntu host
+
+> ansible host_ip -m setup
+
+copy ansible_os_family
+
+now open playbook
+
+-name: installing tree in Redhat
+    yum:
+      name: tree
+      state: present/installed
+    when: ansible_os_family == "RedHat"
+
+-name: installing tree in ubuntu
+    apt:
+      name: tree
+      state: present/installed
+    when: ansible_os_family == "Debian"
+
+if when condition evaluate to true then only
+that task will run.
+
+Note: if tree is not installing on ubuntu, first update the apt-get repositiry "sudo apt-get update".
+
+
+installing httpd
+================
+install_httpd.yml
+
+---
+-name: play book name
+ hosts: host inventory file/all
+ become: true
+ gather_facts: no  # to not run default gathering facts 
+ vars:
+   var_name1: value
+   var_name2: value
+ tasks:
+   -name: installing httpd in Redhat
+    yum:
+      name: httpd
+      state: installed  (# for yum)
+    when: ansible_os_family == "RedHat"
+
+   -name: installing httpd in ubuntu
+    apt:
+      name: apache2
+      state: present    (# for apt)
+    when: ansible_os_family == "Debian"
+
+...
+
+> ansible-playbook install_httpd.yml --check   # to check for syntax mistakes
+
+> ansible-playbook install_httpd.yml --list-hosts --list-tasks
+
+> which apache2  # where apache2 is installed
+
+
+

@@ -1,3 +1,4 @@
+
 Ansibile
 ========
 Ansible written in python.
@@ -37,6 +38,9 @@ Ansible Installation
 1 -master server
 2 -slaves servers
 
+==========================
+STEP-1 Changing host name
+==========================
 1. cerate new EC2 instance and connect to it.
 
 2. hostname ==> it gives host name. ip address
@@ -47,12 +51,18 @@ Ansible Installation
 
 5. sudo vi /ect/hostname
 
+remove the existing AWS ip
 Enter host name and save it.
 now hostname change is permenante. if reboot instance also it won't change
 
+======================
+STEP-2 Creating a user
+======================
 cat /etc/passwd ===> to see all users info in EC2 instance.
 
 6. useradd AnsiAdmin ===> creating dedicated user to ansible.
+
+Note: check if a directory with username is created or not under the path "/home/".
 
 7. passwd AnsiAdmin(username) ===> set password to user
 enter password
@@ -61,12 +71,14 @@ enter password again
 8. visudo
 shift+g ===> to come down
 
-Allow root to run any
+Allow root to run any commands anywhere
 AnsiAdmin ALL=(ALL) NOPASSWD: ALL
 
 save and exit.
 
-9. vi /etc/ssh/sshd_config  ==> to make sure password authentication is yes
+> cd /etc/ssh/
+
+9. isshd_config  ==> to make sure password authentication is yes
 
 /password ==> to search for password in vi editor
 
@@ -83,9 +95,26 @@ save and exit.
 
 12. ssh-keygen  ==> generate ssh keys
 
-13. sudo yum install python3
+Note:
+-----
+We have to generate ssh keys only in master node, no need to create ssh keys in slave nodes.
+we will copy the master node ssh keys to slave nodes.
 
-14. sudo yum install python3-pip
+==========================
+STEP-3 Installing Ansible
+==========================
+Method-1
+--------
+> sudo yum install ansible
+(or)
+> sudo amazon-linux-extras install ansible2
+
+
+Method-2
+--------
+13. sudo yum install python3 / sudo yum install python
+
+14. sudo yum install python3-pip / sudo yum install python-pip
 
 15. sudo pip install ansible
 
